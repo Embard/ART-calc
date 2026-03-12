@@ -1,17 +1,20 @@
+
 const state = {
   artifacts: [],
   artifactsMap: {},
   inventory: {},
   beltContainers: 5,
   slots: [],
-  pickerSlotIndex: null
+  pickerSlotIndex: null,
+  variants: null
 };
 
-const STORAGE_KEY = 'stalker-build-helper-v2';
+const STORAGE_KEY = 'stalker-build-helper-v4';
 
 const NAME_ALIASES = {
   'Шнурвал': 'Измененный штурвал',
-  'Травий': 'Гравий'
+  'Травий': 'Гравий',
+  'Золотая Рыбка': 'Золотая рыбка'
 };
 
 function canonicalName(name) {
@@ -47,10 +50,12 @@ const pickerOwnedOnly = document.getElementById('pickerOwnedOnly');
 const slotCountLabel = document.getElementById('slotCountLabel');
 const filledCountLabel = document.getElementById('filledCountLabel');
 const ownedUsageLabel = document.getElementById('ownedUsageLabel');
+const variantsRoot = document.getElementById('variantsRoot');
 
 function normalizeArt(a) {
   return {
     ...a,
+    name: canonicalName(a.name),
     health: Number(a.health || 0),
     blood: Number(a.blood || 0),
     shock: Number(a.shock || 0),
@@ -61,7 +66,7 @@ function normalizeArt(a) {
     radBalance: Number(a.radBalance || 0),
     bleedChance: Number(a.bleedChance || 0),
     bleedHeal: Number(a.bleedHeal || 0),
-    isFish: Boolean(a.isFish)
+    isFish: Boolean(a.isFish || canonicalName(a.name).toLowerCase() === 'золотая рыбка')
   };
 }
 
@@ -111,18 +116,22 @@ function ensureSlotsLength() {
   }
 }
 
-function countSelected() {
+function countSelected(slots = state.slots) {
   const counts = {};
-  state.slots.forEach(name => {
+  slots.forEach(name => {
     if (!name) return;
     counts[name] = (counts[name] || 0) + 1;
   });
   return counts;
 }
 
+function usedCountFor(name, slots = state.slots) {
+  return countSelected(slots)[name] || 0;
+}
+
 function remainingInventory(name) {
   const owned = Number(state.inventory[name] || 0);
-  const used = countSelected()[name] || 0;
+  const used = usedCountFor(name);
   return Math.max(0, owned - used);
 }
 
@@ -159,6 +168,49 @@ function getTotals(slots = state.slots) {
   return totals;
 }
 
+function cloneTotals(t) {
+  return { ...t };
+}
+
+function addArtToTotals(totals, art) {
+  const t = totals;
+  t.health += art.health;
+  t.blood += art.blood;
+  t.shock += art.shock;
+  t.water += art.water;
+  t.food += art.food;
+  t.radOut += art.radOut;
+  t.radIn += art.radIn;
+  t.radBalance += art.radBalance;
+  t.bleedChance += art.bleedChance;
+  t.bleedHeal += art.bleedHeal;
+  return t;
+}
+
+function subArtFromTotals(totals, art) {
+  const t = totals;
+  t.health -= art.health;
+  t.blood -= art.blood;
+  t.shock -= art.shock;
+  t.water -= art.water;
+  t.food -= art.food;
+  t.radOut -= art.radOut;
+  t.radIn -= art.radIn;
+  t.radBalance -= art.radBalance;
+  t.bleedChance -= art.bleedChance;
+  t.bleedHeal -= art.bleedHeal;
+  return t;
+}
+
+function isSafeTotals(totals) {
+  return (
+    totals.health >= 0 &&
+    totals.blood >= 0 &&
+    totals.shock >= 0 &&
+    totals.radBalance >= 0
+  );
+}
+
 function hungryFriendly(totalHealth) {
   return totalHealth > 0;
 }
@@ -193,7 +245,7 @@ function contributionForNeed(art, needKey) {
   }
 }
 
-function fishPenalty(art) {
+function fishPenaltyFactor(art) {
   return art.isFish ? 0.35 : 1;
 }
 
@@ -214,7 +266,7 @@ function getSuggestionsForNeed(need, ownedOnly) {
       remaining,
       contrib,
       potential,
-      score: (ownedOnly ? potential : contrib) * fishPenalty(art)
+      score: (ownedOnly ? potential : contrib) * fishPenaltyFactor(art)
     });
   });
 
@@ -227,10 +279,7 @@ function estimateMissing(need) {
   const best = suggestions[0];
   if (!best) return null;
   const countNeeded = Math.ceil(need.amount / Math.max(best.contrib, 1));
-  return {
-    art: best.art,
-    countNeeded
-  };
+  return { art: best.art, countNeeded };
 }
 
 function renderTotals() {
@@ -255,20 +304,29 @@ function renderTotals() {
   });
 
   const needs = getNeeds(totals);
-  renderNeeds(needs, totals);
+  renderNeeds(needs);
 }
 
-function renderNeeds(needs, totals) {
+function renderNeeds(needs) {
   needsList.innerHTML = '';
   ownedSuggestions.innerHTML = '';
   missingSuggestions.innerHTML = '';
 
-  const hungerAllowed = hungryFriendly(totals.health);
+  if (!needs.length) {
+    const ok1 = document.createElement('div');
+    ok1.className = 'empty-state';
+    ok1.textContent = 'Критичных минусов нет. Сборка безопасна по здоровью / крови / шоку / радиации.';
+    needsList.appendChild(ok1);
 
-  if (needs.length === 0) {
-    needsList.innerHTML = `<div class="empty-state">Сборка выглядит жизнеспособной. ${hungerAllowed ? 'Минус вода/еда допустимы, пока здоровье в плюсе.' : ''}</div>`;
-    ownedSuggestions.innerHTML = `<div class="empty-state">Критичных дыр нет.</div>`;
-    missingSuggestions.innerHTML = `<div class="empty-state">Ничего специально искать не нужно.</div>`;
+    const ok2 = document.createElement('div');
+    ok2.className = 'empty-state';
+    ok2.textContent = 'Сейчас ничего дополнительно закрывать не нужно.';
+    ownedSuggestions.appendChild(ok2);
+
+    const ok3 = document.createElement('div');
+    ok3.className = 'empty-state';
+    ok3.textContent = 'Для безопасной сборки сейчас ничего искать не нужно.';
+    missingSuggestions.appendChild(ok3);
     return;
   }
 
@@ -278,7 +336,7 @@ function renderNeeds(needs, totals) {
     needEl.innerHTML = `
       <div class="need-head">
         <div class="need-name">${need.name}</div>
-        <div class="badge no">Нужно ${need.amount}</div>
+        <div class="badge no">Нужно закрыть ${need.amount}</div>
       </div>
     `;
     needsList.appendChild(needEl);
@@ -316,7 +374,7 @@ function renderNeeds(needs, totals) {
     const line = document.createElement('div');
     line.className = 'helper-line';
     if (missing) {
-      line.textContent = `Если искать отдельно: ${missing.art.name} ×${missing.countNeeded}. ${missing.art.isFish ? 'Рыбка специально занижена по приоритету и берётся только когда других сильных вариантов мало.' : ''}`;
+      line.textContent = `Если искать отдельно: ${missing.art.name} ×${missing.countNeeded}. ${missing.art.isFish ? 'Рыбка имеет низкий приоритет и берётся только когда нормальной замены мало.' : ''}`;
     } else {
       line.textContent = 'Нет подходящих артов в базе.';
     }
@@ -377,7 +435,7 @@ function initialFor(name) {
 }
 
 function slotCanUseArt(name, slotIndex) {
-  return remainingInventoryExcludingSlot(name, slotIndex) > 0;
+  return remainingInventoryExcludingSlot(name, slotIndex) > 0 || state.slots[slotIndex] === name;
 }
 
 function renderBuilder() {
@@ -394,7 +452,7 @@ function renderBuilder() {
     card.className = 'container-card';
     card.innerHTML = `
       <div class="container-head">
-        <div class="container-title">Ясной контейнер для артефактов на 3 слота</div>
+        <div class="container-title">Контейнер на 3 слота</div>
         <div class="pill">Контейнер ${c + 1}</div>
       </div>
       <div class="container-slots"></div>
@@ -416,6 +474,10 @@ function renderBuilder() {
       } else {
         icon.textContent = '+';
         nameEl.textContent = 'Выбрать арт';
+      }
+
+      if (artName && (used[artName] || 0) > Number(state.inventory[artName] || 0)) {
+        btn.classList.add('invalid');
       }
 
       btn.addEventListener('click', () => openPicker(slotIndex));
@@ -490,7 +552,7 @@ function renderPicker() {
       </div>
     `;
     card.addEventListener('click', () => {
-      if (ownedOnly && remaining <= 0) return;
+      if (ownedOnly && remaining <= 0 && state.slots[slotIndex] !== art.name) return;
       state.slots[slotIndex] = art.name;
       saveState();
       renderAll();
@@ -500,195 +562,369 @@ function renderPicker() {
   });
 }
 
-
-function hardPenalty(totals) {
-  let penalty = 0;
-  if (totals.health < 0) penalty += Math.abs(totals.health) * 100000;
-  if (totals.blood < 0) penalty += Math.abs(totals.blood) * 80000;
-  if (totals.shock < 0) penalty += Math.abs(totals.shock) * 60000;
-  if (totals.radBalance < 0) penalty += Math.abs(totals.radBalance) * 60000;
-  if (totals.bleedChance > 0) penalty += Math.abs(totals.bleedChance) * 30000;
-  if (totals.bleedHeal < 0) penalty += Math.abs(totals.bleedHeal) * 15000;
-
-  const hungerAllowed = hungryFriendly(totals.health);
-  if (!hungerAllowed && totals.water < 0) penalty += Math.abs(totals.water) * 2500;
-  if (!hungerAllowed && totals.food < 0) penalty += Math.abs(totals.food) * 2500;
-
-  return penalty;
+function inventoryQtyArray() {
+  return state.artifacts.map(a => Number(state.inventory[a.name] || 0));
 }
 
-function softQualityScore(totals) {
-  const antiBleed = Math.max(0, -totals.bleedChance);
-  const hungerWeight = hungryFriendly(totals.health) ? 0.15 : 0.75;
-  return (
-    totals.health * 7 +
-    totals.blood * 3 +
-    totals.shock * 2.5 +
-    totals.radBalance * 3.5 +
-    totals.bleedHeal * 1.5 +
-    antiBleed * 2 +
-    totals.water * hungerWeight +
-    totals.food * hungerWeight
-  );
-}
-
-function buildEvaluation(totals) {
-  return {
-    penalty: hardPenalty(totals),
-    quality: softQualityScore(totals)
-  };
-}
-
-function betterEval(a, b) {
-  if (!b) return true;
-  if (a.penalty !== b.penalty) return a.penalty < b.penalty;
-  return a.quality > b.quality;
-}
-
-function scoreArtifactForBuild(art, totals) {
-  const weights = {
-    health: totals.health < 0 ? 7.5 : 2.8,
-    blood: totals.blood < 0 ? 5.5 : 2.6,
-    shock: totals.shock < 0 ? 5.5 : 2.5,
-    radBalance: totals.radBalance < 0 ? 6.5 : 2.5,
-    bleedHeal: totals.bleedHeal < 0 ? 4.5 : 1.6,
-    antiBleed: totals.bleedChance > 0 ? 5.0 : 1.6,
-    water: totals.health > 0 ? 0.25 : 1.1,
-    food: totals.health > 0 ? 0.25 : 1.1
-  };
-  const antiBleed = Math.max(0, -art.bleedChance);
-  let score = 0;
-  score += art.health * weights.health;
-  score += art.blood * weights.blood;
-  score += art.shock * weights.shock;
-  score += art.radBalance * weights.radBalance;
-  score += art.bleedHeal * weights.bleedHeal;
-  score += antiBleed * weights.antiBleed;
-  score += art.water * weights.water;
-  score += art.food * weights.food;
-
-  // Penalties for hard negatives
-  if (art.health < 0) score += art.health * 1.8;
-  if (art.blood < 0) score += art.blood * 1.5;
-  if (art.shock < 0) score += art.shock * 1.5;
-  if (art.radBalance < 0) score += art.radBalance * 1.8;
-  if (art.bleedChance > 0) score -= art.bleedChance * 1.2;
-
-  // Fish exists, but prefer alternatives when possible
-  if (art.isFish) score -= 18;
-
-  return score;
-}
-
-function autoBuild() {
-  const slotCount = state.beltContainers * 3;
-  const inventoryEntries = Object.entries(state.inventory).filter(([, qty]) => Number(qty) > 0);
-  if (!inventoryEntries.length) {
-    alert('Сначала заполни инвентарь: сколько у тебя есть артов.');
-    return;
-  }
-
-  const remaining = {};
-  inventoryEntries.forEach(([name, qty]) => {
-    const fixed = canonicalName(name);
-    remaining[fixed] = (remaining[fixed] || 0) + Number(qty);
+function countsArrayFromSlots(slots) {
+  const counts = Array(state.artifacts.length).fill(0);
+  slots.forEach(name => {
+    const idx = state.artifacts.findIndex(a => a.name === name);
+    if (idx >= 0) counts[idx] += 1;
   });
+  return counts;
+}
 
-  const nextSlots = Array(slotCount).fill(null);
-  let totals = getTotals(nextSlots);
+function materializeSlotsFromCounts(counts) {
+  const items = [];
+  const sortable = [];
+  counts.forEach((count, idx) => {
+    if (!count) return;
+    sortable.push({ idx, count, name: state.artifacts[idx].name });
+  });
+  sortable.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ru'));
+  sortable.forEach(x => {
+    for (let i = 0; i < x.count; i++) items.push(state.artifacts[x.idx].name);
+  });
+  return items;
+}
 
-  // Шаг 1. Базовый greedy-заполнитель.
-  for (let i = 0; i < slotCount; i++) {
-    let best = null;
-    for (const art of state.artifacts) {
-      if ((remaining[art.name] || 0) <= 0) continue;
-      const projectedSlots = nextSlots.slice();
-      projectedSlots[i] = art.name;
-      const projectedTotals = getTotals(projectedSlots);
-      const evalScore = buildEvaluation(projectedTotals);
-      const artScore = scoreArtifactForBuild(art, totals);
-      const candidate = {
-        art,
-        evalScore,
-        score: artScore
-      };
-      if (
-        !best ||
-        betterEval(evalScore, best.evalScore) ||
-        (evalScore.penalty === best.evalScore.penalty && evalScore.quality === best.evalScore.quality && artScore > best.score)
-      ) {
-        best = candidate;
-      }
-    }
-    if (!best) break;
-    nextSlots[i] = best.art.name;
-    remaining[best.art.name] -= 1;
-    totals = getTotals(nextSlots);
+function countFishFromCounts(counts) {
+  let n = 0;
+  counts.forEach((count, idx) => {
+    if (count && state.artifacts[idx].isFish) n += count;
+  });
+  return n;
+}
+
+function signatureFromCounts(counts) {
+  return counts.join('|');
+}
+
+function baseObjectiveScore(totals, fishCount, objective) {
+  const waterPenalty = Math.max(0, -totals.water);
+  const foodPenalty = Math.max(0, -totals.food);
+  const bleedPenalty = Math.max(0, totals.bleedChance) * 6 + Math.max(0, -totals.bleedHeal) * 4;
+  const fishPenalty = fishCount * 420;
+
+  const commonPenalty = waterPenalty * 0.35 + foodPenalty * 0.35 + bleedPenalty + fishPenalty;
+  const hardPenalty =
+    Math.max(0, -totals.health) * 700 +
+    Math.max(0, -totals.blood) * 40 +
+    Math.max(0, -totals.shock) * 90 +
+    Math.max(0, -totals.radBalance) * 120;
+
+  switch (objective) {
+    case 'health':
+      return totals.health * 170 + totals.blood * 1.1 + totals.shock * 3.2 + totals.radBalance * 4.0 - commonPenalty - hardPenalty;
+    case 'blood':
+      return totals.blood * 2.4 + totals.health * 55 + totals.shock * 2.8 + totals.radBalance * 3.8 - commonPenalty - hardPenalty;
+    case 'shock':
+      return totals.shock * 9.2 + totals.health * 55 + totals.blood * 1.1 + totals.radBalance * 3.5 - commonPenalty - hardPenalty;
+    case 'radBalance':
+      return totals.radBalance * 11 + totals.health * 52 + totals.blood * 1.0 + totals.shock * 2.6 - commonPenalty - hardPenalty;
+    case 'balanced':
+    default:
+      return totals.health * 120 + totals.blood * 1.6 + totals.shock * 4.6 + totals.radBalance * 5.2 - commonPenalty - hardPenalty;
   }
+}
 
-  // Шаг 2. Ремонтируем билд заменами, пока не уйдут критичные минусы.
-  let improved = true;
-  let guard = 0;
-  while (improved && hardPenalty(totals) > 0 && guard < 120) {
-    guard += 1;
-    improved = false;
-    let bestMove = null;
+function finalObjectiveScore(totals, fishCount, objective) {
+  const waterPenalty = Math.max(0, -totals.water);
+  const foodPenalty = Math.max(0, -totals.food);
+  const bleedPenalty = Math.max(0, totals.bleedChance) * 30 + Math.max(0, -totals.bleedHeal) * 20;
+  const fishPenalty = fishCount * 12000;
 
-    for (let slotIndex = 0; slotIndex < nextSlots.length; slotIndex++) {
-      const currentName = nextSlots[slotIndex];
-      if (!currentName) continue;
+  switch (objective) {
+    case 'health':
+      return totals.health * 100000 + totals.blood * 50 + totals.shock * 3000 + totals.radBalance * 2500 - fishPenalty - waterPenalty * 10 - foodPenalty * 10 - bleedPenalty;
+    case 'blood':
+      return totals.blood * 1000 + totals.health * 20000 + totals.shock * 2400 + totals.radBalance * 2200 - fishPenalty - waterPenalty * 10 - foodPenalty * 10 - bleedPenalty;
+    case 'shock':
+      return totals.shock * 15000 + totals.health * 16000 + totals.blood * 40 + totals.radBalance * 1800 - fishPenalty - waterPenalty * 10 - foodPenalty * 10 - bleedPenalty;
+    case 'radBalance':
+      return totals.radBalance * 20000 + totals.health * 15000 + totals.blood * 35 + totals.shock * 1400 - fishPenalty - waterPenalty * 10 - foodPenalty * 10 - bleedPenalty;
+    default:
+      return finalObjectiveScore(totals, fishCount, 'health');
+  }
+}
 
-      // временно возвращаем текущий арт в доступный пул
-      remaining[currentName] = (remaining[currentName] || 0) + 1;
+function beamSearch(slotCount, objective, beamWidth = 80) {
+  const qty = inventoryQtyArray();
+  const totalOwned = qty.reduce((a, b) => a + b, 0);
+  if (totalOwned < slotCount) return [];
 
-      for (const art of state.artifacts) {
-        if ((remaining[art.name] || 0) <= 0) continue;
-        if (art.name === currentName) continue;
+  let beam = [{
+    counts: Array(state.artifacts.length).fill(0),
+    totals: {
+      health: 0, blood: 0, shock: 0, water: 0, food: 0,
+      radOut: 0, radIn: 0, radBalance: 0, bleedChance: 0, bleedHeal: 0
+    },
+    fishCount: 0,
+    score: 0
+  }];
 
-        const projectedSlots = nextSlots.slice();
-        projectedSlots[slotIndex] = art.name;
-        const projectedTotals = getTotals(projectedSlots);
-        const evalScore = buildEvaluation(projectedTotals);
+  for (let depth = 0; depth < slotCount; depth++) {
+    const nextMap = new Map();
 
-        const currentEval = buildEvaluation(totals);
-        if (
-          evalScore.penalty < currentEval.penalty ||
-          (evalScore.penalty === currentEval.penalty && evalScore.quality > currentEval.quality)
-        ) {
-          if (!bestMove || betterEval(evalScore, bestMove.evalScore)) {
-            bestMove = {
-              slotIndex,
-              from: currentName,
-              to: art.name,
-              evalScore,
-              totals: projectedTotals
-            };
-          }
+    beam.forEach(cand => {
+      for (let idx = 0; idx < state.artifacts.length; idx++) {
+        if ((qty[idx] || 0) <= cand.counts[idx]) continue;
+        const art = state.artifacts[idx];
+        const counts = cand.counts.slice();
+        counts[idx] += 1;
+        const totals = cloneTotals(cand.totals);
+        addArtToTotals(totals, art);
+        const fishCount = cand.fishCount + (art.isFish ? 1 : 0);
+        const score = baseObjectiveScore(totals, fishCount, objective);
+        const sig = signatureFromCounts(counts);
+        const existing = nextMap.get(sig);
+        if (!existing || score > existing.score) {
+          nextMap.set(sig, { counts, totals, fishCount, score });
         }
       }
+    });
 
-      remaining[currentName] -= 1;
+    beam = [...nextMap.values()]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, beamWidth);
+  }
+
+  return beam;
+}
+
+function multisetDistance(countsA, countsB) {
+  let d = 0;
+  for (let i = 0; i < countsA.length; i++) d += Math.abs((countsA[i] || 0) - (countsB[i] || 0));
+  return d;
+}
+
+function hillClimb(candidate, objective) {
+  let current = {
+    counts: candidate.counts.slice(),
+    totals: cloneTotals(candidate.totals),
+    fishCount: candidate.fishCount
+  };
+  let improved = true;
+  let guard = 0;
+  const qty = inventoryQtyArray();
+
+  while (improved && guard < 25) {
+    guard += 1;
+    improved = false;
+    const currentScore = finalObjectiveScore(current.totals, current.fishCount, objective);
+    let best = null;
+
+    for (let oldIdx = 0; oldIdx < current.counts.length; oldIdx++) {
+      if (!current.counts[oldIdx]) continue;
+      const oldArt = state.artifacts[oldIdx];
+
+      const baseCounts = current.counts.slice();
+      baseCounts[oldIdx] -= 1;
+      const baseTotals = cloneTotals(current.totals);
+      subArtFromTotals(baseTotals, oldArt);
+      const baseFish = current.fishCount - (oldArt.isFish ? 1 : 0);
+
+      for (let newIdx = 0; newIdx < state.artifacts.length; newIdx++) {
+        if (newIdx === oldIdx) continue;
+        if (baseCounts[newIdx] >= (qty[newIdx] || 0)) continue;
+
+        const newArt = state.artifacts[newIdx];
+        const counts = baseCounts.slice();
+        counts[newIdx] += 1;
+        const totals = cloneTotals(baseTotals);
+        addArtToTotals(totals, newArt);
+        if (!isSafeTotals(totals)) continue;
+
+        const fishCount = baseFish + (newArt.isFish ? 1 : 0);
+        const score = finalObjectiveScore(totals, fishCount, objective);
+        if (score > currentScore + 1e-6 && (!best || score > best.score)) {
+          best = { counts, totals, fishCount, score };
+        }
+      }
     }
 
-    if (bestMove) {
-      remaining[bestMove.from] = (remaining[bestMove.from] || 0) + 1;
-      remaining[bestMove.to] -= 1;
-      nextSlots[bestMove.slotIndex] = bestMove.to;
-      totals = bestMove.totals;
+    if (best) {
+      current = best;
       improved = true;
     }
   }
+  return current;
+}
 
-  state.slots = nextSlots;
-  saveState();
-  renderAll();
+function buildCandidatePool(slotCount) {
+  const objectives = ['balanced', 'health', 'blood', 'shock', 'radBalance'];
+  const pool = new Map();
 
-  const finalNeeds = getNeeds(totals);
-  const hardBad = finalNeeds.filter(x => !['water', 'food'].includes(x.key));
-  if (hardBad.length) {
-    const text = hardBad.map(x => `${x.name}: ${x.amount}`).join(', ');
-    alert(`Автоподбор собрал лучший доступный вариант, но полностью безопасную сборку из текущего инвентаря сделать не удалось. Что осталось не закрыто: ${text}`);
+  objectives.forEach(obj => {
+    beamSearch(slotCount, obj).forEach(c => {
+      const sig = signatureFromCounts(c.counts);
+      const existing = pool.get(sig);
+      if (!existing || baseObjectiveScore(c.totals, c.fishCount, 'balanced') > baseObjectiveScore(existing.totals, existing.fishCount, 'balanced')) {
+        pool.set(sig, c);
+      }
+    });
+  });
+
+  return [...pool.values()];
+}
+
+function pickTopVariants(pool, objective) {
+  let candidates = pool
+    .filter(c => isSafeTotals(c.totals))
+    .sort((a, b) => finalObjectiveScore(b.totals, b.fishCount, objective) - finalObjectiveScore(a.totals, a.fishCount, objective));
+
+  const improved = [];
+  candidates.slice(0, 12).forEach(c => {
+    const better = hillClimb(c, objective);
+    improved.push(better);
+  });
+
+  const merged = new Map();
+  [...candidates, ...improved].forEach(c => {
+    const sig = signatureFromCounts(c.counts);
+    const existing = merged.get(sig);
+    const sc = finalObjectiveScore(c.totals, c.fishCount, objective);
+    if (!existing || sc > finalObjectiveScore(existing.totals, existing.fishCount, objective)) {
+      merged.set(sig, c);
+    }
+  });
+
+  candidates = [...merged.values()]
+    .filter(c => isSafeTotals(c.totals))
+    .sort((a, b) => finalObjectiveScore(b.totals, b.fishCount, objective) - finalObjectiveScore(a.totals, a.fishCount, objective));
+
+  const result = [];
+  candidates.forEach(c => {
+    if (result.length >= 3) return;
+    const tooClose = result.some(x => multisetDistance(x.counts, c.counts) <= 2);
+    if (!tooClose) result.push(c);
+  });
+  return result;
+}
+
+function getFallbackUnsafeCandidate(slotCount) {
+  const pool = buildCandidatePool(slotCount)
+    .sort((a, b) => baseObjectiveScore(b.totals, b.fishCount, 'balanced') - baseObjectiveScore(a.totals, a.fishCount, 'balanced'));
+  return pool[0] || null;
+}
+
+function renderVariants() {
+  variantsRoot.innerHTML = '';
+  const slotCount = state.beltContainers * 3;
+  const totalOwned = Object.values(state.inventory).reduce((a, b) => a + Number(b || 0), 0);
+
+  if (totalOwned < slotCount) {
+    variantsRoot.innerHTML = `<div class="empty-state">В инвентаре меньше артов, чем нужно на пояс: есть ${totalOwned}, а требуется ${slotCount} слотов.</div>`;
+    state.variants = null;
+    return;
   }
+
+  const pool = buildCandidatePool(slotCount);
+  const safePool = pool.filter(c => isSafeTotals(c.totals));
+
+  if (!safePool.length) {
+    const fallback = getFallbackUnsafeCandidate(slotCount);
+    let html = `<div class="empty-state">Безопасные варианты из текущего инвентаря не найдены. Проверь, хватает ли артов на здоровье / кровь / шок / баланс радиации.</div>`;
+    if (fallback) {
+      const needs = getNeeds(fallback.totals);
+      if (needs.length) {
+        html += `<div class="empty-state"><b>Чего не хватает для безопасной сборки:</b><br>${needs.map(n => {
+          const miss = estimateMissing(n);
+          return `${n.name}: нужно ${n.amount}${miss ? `, лучше искать ${miss.art.name} ×${miss.countNeeded}` : ''}`;
+        }).join('<br>')}</div>`;
+      }
+    }
+    variantsRoot.innerHTML = html;
+    state.variants = null;
+    return;
+  }
+
+  const groups = [
+    { key: 'health', title: 'Здоровье' },
+    { key: 'blood', title: 'Кровь' },
+    { key: 'shock', title: 'Шок' },
+    { key: 'radBalance', title: 'Баланс радиации' }
+  ];
+
+  state.variants = {};
+  groups.forEach(group => {
+    state.variants[group.key] = pickTopVariants(pool, group.key);
+  });
+
+  groups.forEach(group => {
+    const wrap = document.createElement('div');
+    wrap.className = 'variant-group';
+    wrap.innerHTML = `
+      <div class="variant-group-title">
+        <div class="variant-name">Топ-3 по: ${group.title}</div>
+        <div class="badge">${group.title}</div>
+      </div>
+      <div class="variant-cards"></div>
+    `;
+    const cardsRoot = wrap.querySelector('.variant-cards');
+    const variants = state.variants[group.key] || [];
+
+    if (!variants.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'Безопасные варианты для этого параметра не найдены.';
+      cardsRoot.appendChild(empty);
+    } else {
+      variants.forEach((cand, idx) => {
+        const slots = materializeSlotsFromCounts(cand.counts);
+        const fishUsed = cand.fishCount > 0;
+        const counts = countSelected(slots);
+        const lines = Object.entries(counts)
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ru'))
+          .map(([name, qty]) => `${name} ×${qty}`)
+          .join('<br>');
+
+        const card = document.createElement('div');
+        card.className = 'variant-card';
+        card.innerHTML = `
+          <div class="variant-head">
+            <div class="variant-name">Вариант ${idx + 1}</div>
+            <div class="badge ${fishUsed ? 'no' : 'ok'}">${fishUsed ? 'Есть рыбка' : 'Без рыбки'}</div>
+          </div>
+          <div class="variant-stats">
+            <span class="stat-chip pos">ХП ${cand.totals.health > 0 ? '+' : ''}${cand.totals.health}</span>
+            <span class="stat-chip pos">Кровь ${cand.totals.blood > 0 ? '+' : ''}${cand.totals.blood}</span>
+            <span class="stat-chip pos">Шок ${cand.totals.shock > 0 ? '+' : ''}${cand.totals.shock}</span>
+            <span class="stat-chip pos">Рад ${cand.totals.radBalance > 0 ? '+' : ''}${cand.totals.radBalance}</span>
+            <span class="stat-chip ${cand.totals.water >= 0 ? 'pos' : 'neg'}">Вода ${cand.totals.water > 0 ? '+' : ''}${cand.totals.water}</span>
+            <span class="stat-chip ${cand.totals.food >= 0 ? 'pos' : 'neg'}">Еда ${cand.totals.food > 0 ? '+' : ''}${cand.totals.food}</span>
+          </div>
+          <div class="variant-list">${lines}</div>
+          <div class="variant-actions">
+            <button class="btn tiny primary">Применить</button>
+          </div>
+        `;
+        card.querySelector('button').addEventListener('click', () => {
+          state.slots = slots.slice();
+          saveState();
+          renderAll(false);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        cardsRoot.appendChild(card);
+      });
+    }
+    variantsRoot.appendChild(wrap);
+  });
+}
+
+function applyBestHealthVariant() {
+  if (!state.variants || !state.variants.health || !state.variants.health.length) {
+    renderVariants();
+  }
+  const best = state.variants && state.variants.health && state.variants.health[0];
+  if (!best) {
+    alert('Безопасный лучший вариант по здоровью не найден из текущего инвентаря.');
+    return;
+  }
+  state.slots = materializeSlotsFromCounts(best.counts);
+  saveState();
+  renderAll(false);
 }
 
 function clearBuild() {
@@ -697,16 +933,17 @@ function clearBuild() {
   renderAll();
 }
 
-function renderAll() {
+function renderAll(recomputeVariants = true) {
   ensureSlotsLength();
   renderInventory();
   renderBuilder();
   renderTotals();
+  if (recomputeVariants) renderVariants();
 }
 
 async function init() {
   const resp = await fetch('artifacts.json');
-  const artifacts = (await resp.json()).map(a => normalizeArt({ ...a, name: canonicalName(a.name) }));
+  const artifacts = (await resp.json()).map(normalizeArt);
   artifacts.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
   state.artifacts = artifacts;
   state.artifactsMap = Object.fromEntries(artifacts.map(a => [a.name, a]));
@@ -717,7 +954,8 @@ async function init() {
   renderAll();
 }
 
-document.getElementById('autoBuildBtn').addEventListener('click', autoBuild);
+document.getElementById('applyBestBtn').addEventListener('click', applyBestHealthVariant);
+document.getElementById('refreshVariantsBtn').addEventListener('click', renderVariants);
 document.getElementById('clearBuildBtn').addEventListener('click', clearBuild);
 document.getElementById('saveStateBtn').addEventListener('click', () => {
   saveState();
@@ -735,7 +973,6 @@ pickerOwnedOnly.addEventListener('change', renderPicker);
 pickerModal.addEventListener('click', (e) => {
   if (e.target.dataset.closePicker === '1') closePicker();
 });
-
 window.addEventListener('beforeunload', saveState);
-init();
 
+init();
