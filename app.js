@@ -9,7 +9,7 @@ const state = {
   variants: null
 };
 
-const STORAGE_KEY = 'stalker-build-helper-v4';
+const STORAGE_KEY = 'stalker-build-helper-v5';
 
 const NAME_ALIASES = {
   'Шнурвал': 'Измененный штурвал',
@@ -548,7 +548,7 @@ function renderPicker() {
       </div>
       <div class="pick-meta">${artStatsChips(art)}</div>
       <div class="pick-footer">
-        <span>${art.isFish ? 'Рыбка: низкий приоритет' : 'Обычный приоритет'}</span>
+        <span>${art.isFish ? 'Рыбка: сильный штраф в подборе' : 'Обычный приоритет'}</span>
       </div>
     `;
     card.addEventListener('click', () => {
@@ -607,82 +607,87 @@ function clamp(v, min, max) {
 
 function normalizedCore(totals) {
   return {
-    health: clamp(Math.max(0, totals.health) / 10, 0, 3),
-    blood: clamp(Math.max(0, totals.blood) / 100, 0, 3),
-    shock: clamp(Math.max(0, totals.shock) / 50, 0, 3),
-    radBalance: clamp(Math.max(0, totals.radBalance) / 30, 0, 3)
+    health: clamp(Math.max(0, totals.health) / 10, 0, 1.5),
+    blood: clamp(Math.max(0, totals.blood) / 100, 0, 1.5),
+    shock: clamp(Math.max(0, totals.shock) / 50, 0, 1.5),
+    radBalance: clamp(Math.max(0, totals.radBalance) / 20, 0, 1.5)
   };
 }
 
-function balancedCoreScore(totals) {
+function balancedCoreScore(totals, slotUsage = 0) {
   const n = normalizedCore(totals);
   const weakest = Math.min(n.health, n.blood, n.shock, n.radBalance);
-  const sum = n.health + n.blood + n.shock + n.radBalance;
-  return weakest * 10000 + sum * 1200;
+  const strongest = Math.max(n.health, n.blood, n.shock, n.radBalance);
+  const avg = (n.health + n.blood + n.shock + n.radBalance) / 4;
+  const spreadPenalty = (strongest - weakest) * 10000;
+  const comfortBonus =
+    Math.max(0, totals.health - 10) * 180 +
+    Math.max(0, totals.blood - 100) * 10 +
+    Math.max(0, totals.shock - 50) * 55 +
+    Math.max(0, totals.radBalance - 20) * 45;
+  return weakest * 45000 + avg * 12000 - spreadPenalty + comfortBonus + slotUsage * 4;
 }
 
 function penalties(totals, fishCount, phase = 'base') {
   const waterPenalty = Math.max(0, -totals.water);
   const foodPenalty = Math.max(0, -totals.food);
-  const bleedPenalty = Math.max(0, totals.bleedChance) * (phase === 'final' ? 70 : 10) + Math.max(0, -totals.bleedHeal) * (phase === 'final' ? 35 : 6);
-  const fishPenalty = fishCount * (phase === 'final' ? 9000 : 900);
-  const softPenalty = waterPenalty * (phase === 'final' ? 1.2 : 0.2) + foodPenalty * (phase === 'final' ? 1.2 : 0.2);
+  const bleedPenalty = Math.max(0, totals.bleedChance) * (phase === 'final' ? 120 : 18) + Math.max(0, -totals.bleedHeal) * (phase === 'final' ? 45 : 8);
+  const fishPenalty = fishCount * (phase === 'final' ? 12000 : 1500);
+  const softPenalty = waterPenalty * (phase === 'final' ? 0.8 : 0.15) + foodPenalty * (phase === 'final' ? 0.8 : 0.15);
   const hardPenalty =
-    Math.max(0, -totals.health) * (phase === 'final' ? 200000 : 12000) +
-    Math.max(0, -totals.blood) * (phase === 'final' ? 80000 : 5000) +
-    Math.max(0, -totals.shock) * (phase === 'final' ? 100000 : 7000) +
-    Math.max(0, -totals.radBalance) * (phase === 'final' ? 120000 : 8000);
+    Math.max(0, -totals.health) * (phase === 'final' ? 250000 : 15000) +
+    Math.max(0, -totals.blood) * (phase === 'final' ? 120000 : 7000) +
+    Math.max(0, -totals.shock) * (phase === 'final' ? 140000 : 9000) +
+    Math.max(0, -totals.radBalance) * (phase === 'final' ? 150000 : 10000);
   return { waterPenalty, foodPenalty, bleedPenalty, fishPenalty, softPenalty, hardPenalty };
 }
 
-function scoreByObjective(totals, fishCount, objective, phase = 'base') {
+function scoreByObjective(totals, fishCount, objective, slotUsage = 0, phase = 'base') {
   const n = normalizedCore(totals);
-  const balance = balancedCoreScore(totals);
+  const balance = balancedCoreScore(totals, slotUsage);
   const p = penalties(totals, fishCount, phase);
-
   const common = balance - p.softPenalty - p.bleedPenalty - p.fishPenalty - p.hardPenalty;
 
   switch (objective) {
     case 'health':
-      return common + n.health * (phase === 'final' ? 20000 : 2200) + totals.health * (phase === 'final' ? 350 : 45) + n.shock * 800 + n.radBalance * 800 + n.blood * 500;
+      return common + n.health * (phase === 'final' ? 12000 : 1400) + totals.health * (phase === 'final' ? 220 : 28) + n.shock * 700 + n.radBalance * 700 + n.blood * 600;
     case 'blood':
-      return common + n.blood * (phase === 'final' ? 20000 : 2200) + totals.blood * (phase === 'final' ? 30 : 4) + n.health * 1000 + n.shock * 700 + n.radBalance * 700;
+      return common + n.blood * (phase === 'final' ? 12000 : 1400) + totals.blood * (phase === 'final' ? 22 : 3) + n.health * 900 + n.shock * 650 + n.radBalance * 650;
     case 'shock':
-      return common + n.shock * (phase === 'final' ? 22000 : 2400) + totals.shock * (phase === 'final' ? 140 : 18) + n.health * 900 + n.blood * 500 + n.radBalance * 650;
+      return common + n.shock * (phase === 'final' ? 12500 : 1450) + totals.shock * (phase === 'final' ? 120 : 15) + n.health * 850 + n.blood * 650 + n.radBalance * 600;
     case 'radBalance':
-      return common + n.radBalance * (phase === 'final' ? 22000 : 2400) + totals.radBalance * (phase === 'final' ? 160 : 22) + n.health * 900 + n.blood * 500 + n.shock * 650;
+      return common + n.radBalance * (phase === 'final' ? 12500 : 1450) + totals.radBalance * (phase === 'final' ? 120 : 16) + n.health * 850 + n.blood * 650 + n.shock * 600;
     case 'balanced':
     default:
-      return common + n.health * (phase === 'final' ? 8000 : 900) + n.blood * (phase === 'final' ? 7500 : 850) + n.shock * (phase === 'final' ? 7800 : 880) + n.radBalance * (phase === 'final' ? 7600 : 860);
+      return common + n.health * (phase === 'final' ? 8200 : 980) + n.blood * (phase === 'final' ? 7600 : 920) + n.shock * (phase === 'final' ? 7600 : 920) + n.radBalance * (phase === 'final' ? 8200 : 980) + slotUsage * (phase === 'final' ? 4 : 1);
   }
 }
 
-function baseObjectiveScore(totals, fishCount, objective) {
-  return scoreByObjective(totals, fishCount, objective, 'base');
+function baseObjectiveScore(totals, fishCount, objective, slotUsage = 0) {
+  return scoreByObjective(totals, fishCount, objective, slotUsage, 'base');
 }
 
-function finalObjectiveScore(totals, fishCount, objective) {
-  return scoreByObjective(totals, fishCount, objective, 'final');
+function finalObjectiveScore(totals, fishCount, objective, slotUsage = 0) {
+  return scoreByObjective(totals, fishCount, objective, slotUsage, 'final');
 }
 
-function beamSearch(slotCount, objective, beamWidth = 220) {
+function beamSearch(slotCount, objective, beamWidth = 240) {
   const qty = inventoryQtyArray();
   const totalOwned = qty.reduce((a, b) => a + b, 0);
-  if (totalOwned < slotCount) return [];
+  const maxDepth = Math.min(slotCount, totalOwned);
+  if (maxDepth <= 0) return { all: [], lastBeam: [] };
 
   let beam = [{
     counts: Array(state.artifacts.length).fill(0),
-    totals: {
-      health: 0, blood: 0, shock: 0, water: 0, food: 0,
-      radOut: 0, radIn: 0, radBalance: 0, bleedChance: 0, bleedHeal: 0
-    },
+    totals: { health: 0, blood: 0, shock: 0, water: 0, food: 0, radOut: 0, radIn: 0, radBalance: 0, bleedChance: 0, bleedHeal: 0 },
     fishCount: 0,
+    slotUsage: 0,
     score: 0
   }];
+  const all = [];
 
-  for (let depth = 0; depth < slotCount; depth++) {
+  for (let depth = 0; depth < maxDepth; depth++) {
     const nextMap = new Map();
-
     beam.forEach(cand => {
       for (let idx = 0; idx < state.artifacts.length; idx++) {
         if ((qty[idx] || 0) <= cand.counts[idx]) continue;
@@ -692,21 +697,19 @@ function beamSearch(slotCount, objective, beamWidth = 220) {
         const totals = cloneTotals(cand.totals);
         addArtToTotals(totals, art);
         const fishCount = cand.fishCount + (art.isFish ? 1 : 0);
-        const score = baseObjectiveScore(totals, fishCount, objective);
+        const slotUsage = cand.slotUsage + 1;
+        const score = baseObjectiveScore(totals, fishCount, objective, slotUsage);
         const sig = signatureFromCounts(counts);
         const existing = nextMap.get(sig);
         if (!existing || score > existing.score) {
-          nextMap.set(sig, { counts, totals, fishCount, score });
+          nextMap.set(sig, { counts, totals, fishCount, slotUsage, score });
         }
       }
     });
-
-    beam = [...nextMap.values()]
-      .sort((a, b) => b.score - a.score)
-      .slice(0, beamWidth);
+    beam = [...nextMap.values()].sort((a, b) => b.score - a.score).slice(0, beamWidth);
+    all.push(...beam);
   }
-
-  return beam;
+  return { all, lastBeam: beam };
 }
 
 function multisetDistance(countsA, countsB) {
@@ -719,22 +722,22 @@ function hillClimb(candidate, objective) {
   let current = {
     counts: candidate.counts.slice(),
     totals: cloneTotals(candidate.totals),
-    fishCount: candidate.fishCount
+    fishCount: candidate.fishCount,
+    slotUsage: candidate.slotUsage
   };
   let improved = true;
   let guard = 0;
   const qty = inventoryQtyArray();
 
-  while (improved && guard < 25) {
+  while (improved && guard < 30) {
     guard += 1;
     improved = false;
-    const currentScore = finalObjectiveScore(current.totals, current.fishCount, objective);
+    const currentScore = finalObjectiveScore(current.totals, current.fishCount, objective, current.slotUsage);
     let best = null;
 
     for (let oldIdx = 0; oldIdx < current.counts.length; oldIdx++) {
       if (!current.counts[oldIdx]) continue;
       const oldArt = state.artifacts[oldIdx];
-
       const baseCounts = current.counts.slice();
       baseCounts[oldIdx] -= 1;
       const baseTotals = cloneTotals(current.totals);
@@ -744,84 +747,79 @@ function hillClimb(candidate, objective) {
       for (let newIdx = 0; newIdx < state.artifacts.length; newIdx++) {
         if (newIdx === oldIdx) continue;
         if (baseCounts[newIdx] >= (qty[newIdx] || 0)) continue;
-
         const newArt = state.artifacts[newIdx];
         const counts = baseCounts.slice();
         counts[newIdx] += 1;
         const totals = cloneTotals(baseTotals);
         addArtToTotals(totals, newArt);
         if (!isSafeTotals(totals)) continue;
-
         const fishCount = baseFish + (newArt.isFish ? 1 : 0);
-        const score = finalObjectiveScore(totals, fishCount, objective);
+        const score = finalObjectiveScore(totals, fishCount, objective, current.slotUsage);
         if (score > currentScore + 1e-6 && (!best || score > best.score)) {
-          best = { counts, totals, fishCount, score };
+          best = { counts, totals, fishCount, slotUsage: current.slotUsage, score };
         }
       }
     }
-
-    if (best) {
-      current = best;
-      improved = true;
-    }
+    if (best) { current = best; improved = true; }
   }
   return current;
 }
 
 function buildCandidatePool(slotCount) {
-  const objectives = ['balanced', 'health', 'blood', 'shock', 'radBalance', 'balanced'];
+  const objectives = ['balanced', 'health', 'blood', 'shock', 'radBalance'];
   const pool = new Map();
-
   objectives.forEach(obj => {
-    beamSearch(slotCount, obj).forEach(c => {
+    const { all } = beamSearch(slotCount, obj, obj === 'balanced' ? 320 : 240);
+    all.forEach(c => {
       const sig = signatureFromCounts(c.counts);
       const existing = pool.get(sig);
-      if (!existing || baseObjectiveScore(c.totals, c.fishCount, 'balanced') > baseObjectiveScore(existing.totals, existing.fishCount, 'balanced')) {
+      const score = baseObjectiveScore(c.totals, c.fishCount, 'balanced', c.slotUsage);
+      if (!existing || score > baseObjectiveScore(existing.totals, existing.fishCount, 'balanced', existing.slotUsage)) {
         pool.set(sig, c);
       }
     });
   });
-
   return [...pool.values()];
 }
 
-function pickTopVariants(pool, objective) {
+function pickTopBalancedVariants(pool, desired = 5) {
   let candidates = pool
     .filter(c => isSafeTotals(c.totals))
-    .sort((a, b) => finalObjectiveScore(b.totals, b.fishCount, objective) - finalObjectiveScore(a.totals, a.fishCount, objective));
+    .sort((a, b) => finalObjectiveScore(b.totals, b.fishCount, 'balanced', b.slotUsage) - finalObjectiveScore(a.totals, a.fishCount, 'balanced', a.slotUsage));
 
   const improved = [];
-  candidates.slice(0, 24).forEach(c => {
-    const better = hillClimb(c, objective);
-    improved.push(better);
-  });
+  candidates.slice(0, 48).forEach(c => improved.push(hillClimb(c, 'balanced')));
 
   const merged = new Map();
   [...candidates, ...improved].forEach(c => {
     const sig = signatureFromCounts(c.counts);
     const existing = merged.get(sig);
-    const sc = finalObjectiveScore(c.totals, c.fishCount, objective);
-    if (!existing || sc > finalObjectiveScore(existing.totals, existing.fishCount, objective)) {
+    const sc = finalObjectiveScore(c.totals, c.fishCount, 'balanced', c.slotUsage);
+    if (!existing || sc > finalObjectiveScore(existing.totals, existing.fishCount, 'balanced', existing.slotUsage)) {
       merged.set(sig, c);
     }
   });
 
   candidates = [...merged.values()]
     .filter(c => isSafeTotals(c.totals))
-    .sort((a, b) => finalObjectiveScore(b.totals, b.fishCount, objective) - finalObjectiveScore(a.totals, a.fishCount, objective));
+    .sort((a, b) => finalObjectiveScore(b.totals, b.fishCount, 'balanced', b.slotUsage) - finalObjectiveScore(a.totals, a.fishCount, 'balanced', a.slotUsage));
 
   const result = [];
-  candidates.forEach(c => {
-    if (result.length >= 3) return;
-    const tooClose = result.some(x => multisetDistance(x.counts, c.counts) <= 2);
-    if (!tooClose) result.push(c);
+  const thresholds = [4, 2, 0];
+  thresholds.forEach(threshold => {
+    candidates.forEach(c => {
+      if (result.length >= desired) return;
+      const same = result.some(x => signatureFromCounts(x.counts) === signatureFromCounts(c.counts));
+      if (same) return;
+      const tooClose = result.some(x => multisetDistance(x.counts, c.counts) <= threshold);
+      if (!tooClose) result.push(c);
+    });
   });
-  return result;
+  return result.slice(0, desired);
 }
 
 function getFallbackUnsafeCandidate(slotCount) {
-  const pool = buildCandidatePool(slotCount)
-    .sort((a, b) => baseObjectiveScore(b.totals, b.fishCount, 'balanced') - baseObjectiveScore(a.totals, a.fishCount, 'balanced'));
+  const pool = buildCandidatePool(slotCount).sort((a, b) => baseObjectiveScore(b.totals, b.fishCount, 'balanced', b.slotUsage) - baseObjectiveScore(a.totals, a.fishCount, 'balanced', a.slotUsage));
   return pool[0] || null;
 }
 
@@ -830,8 +828,8 @@ function renderVariants() {
   const slotCount = state.beltContainers * 3;
   const totalOwned = Object.values(state.inventory).reduce((a, b) => a + Number(b || 0), 0);
 
-  if (totalOwned < slotCount) {
-    variantsRoot.innerHTML = `<div class="empty-state">В инвентаре меньше артов, чем нужно на пояс: есть ${totalOwned}, а требуется ${slotCount} слотов.</div>`;
+  if (!totalOwned) {
+    variantsRoot.innerHTML = `<div class="empty-state">Сначала заполни инвентарь. После этого появятся сбалансированные варианты сборок.</div>`;
     state.variants = null;
     return;
   }
@@ -841,11 +839,11 @@ function renderVariants() {
 
   if (!safePool.length) {
     const fallback = getFallbackUnsafeCandidate(slotCount);
-    let html = `<div class="empty-state">Безопасные варианты из текущего инвентаря не найдены. Проверь, хватает ли артов на здоровье / кровь / шок / баланс радиации.</div>`;
+    let html = `<div class="empty-state">Из текущего инвентаря не найдено ни одной безопасной сборки. Сайт не будет предлагать билд, который ломает здоровье / кровь / шок / радиацию.</div>`;
     if (fallback) {
       const needs = getNeeds(fallback.totals);
       if (needs.length) {
-        html += `<div class="empty-state"><b>Чего не хватает для безопасной сборки:</b><br>${needs.map(n => {
+        html += `<div class="empty-state"><b>Что стоит добрать, чтобы выйти в плюс:</b><br>${needs.map(n => {
           const miss = estimateMissing(n);
           return `${n.name}: нужно ${n.amount}${miss ? `, лучше искать ${miss.art.name} ×${miss.countNeeded}` : ''}`;
         }).join('<br>')}</div>`;
@@ -856,92 +854,71 @@ function renderVariants() {
     return;
   }
 
-  const groups = [
-    { key: 'health', title: 'Здоровье' },
-    { key: 'blood', title: 'Кровь' },
-    { key: 'shock', title: 'Шок' },
-    { key: 'radBalance', title: 'Баланс радиации' }
-  ];
+  const variants = pickTopBalancedVariants(pool, 5);
+  state.variants = { balanced: variants };
 
-  state.variants = {};
-  groups.forEach(group => {
-    state.variants[group.key] = pickTopVariants(pool, group.key);
-  });
+  const wrap = document.createElement('div');
+  wrap.className = 'variant-group';
+  wrap.innerHTML = `
+    <div class="variant-group-title">
+      <div class="variant-name">Альтернативные баланс-сборки</div>
+      <div class="badge">Топ-5</div>
+    </div>
+    <div class="variant-cards"></div>
+  `;
+  const cardsRoot = wrap.querySelector('.variant-cards');
 
-  groups.forEach(group => {
-    const wrap = document.createElement('div');
-    wrap.className = 'variant-group';
-    wrap.innerHTML = `
-      <div class="variant-group-title">
-        <div class="variant-name">Топ-3 по: ${group.title}</div>
-        <div class="badge">${group.title}</div>
+  variants.forEach((cand, idx) => {
+    const slots = materializeSlotsFromCounts(cand.counts);
+    const fishUsed = cand.fishCount > 0;
+    const counts = countSelected(slots);
+    const lines = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ru')).map(([name, qty]) => `${name} ×${qty}`).join('<br>');
+    const emptySlots = slotCount - cand.slotUsage;
+    const card = document.createElement('div');
+    card.className = 'variant-card';
+    card.innerHTML = `
+      <div class="variant-head">
+        <div class="variant-name">Вариант ${idx + 1}</div>
+        <div class="badge ${fishUsed ? 'no' : 'ok'}">${fishUsed ? 'Есть рыбка' : 'Без рыбки'}</div>
       </div>
-      <div class="variant-cards"></div>
+      <div class="variant-stats">
+        <span class="stat-chip pos">ХП ${cand.totals.health > 0 ? '+' : ''}${cand.totals.health}</span>
+        <span class="stat-chip pos">Кровь ${cand.totals.blood > 0 ? '+' : ''}${cand.totals.blood}</span>
+        <span class="stat-chip pos">Шок ${cand.totals.shock > 0 ? '+' : ''}${cand.totals.shock}</span>
+        <span class="stat-chip pos">Рад ${cand.totals.radBalance > 0 ? '+' : ''}${cand.totals.radBalance}</span>
+        <span class="stat-chip ${cand.totals.water >= 0 ? 'pos' : 'neg'}">Вода ${cand.totals.water > 0 ? '+' : ''}${cand.totals.water}</span>
+        <span class="stat-chip ${cand.totals.food >= 0 ? 'pos' : 'neg'}">Еда ${cand.totals.food > 0 ? '+' : ''}${cand.totals.food}</span>
+      </div>
+      <div class="helper-line">Слотов занято: ${cand.slotUsage}/${slotCount}${emptySlots > 0 ? `, свободно ${emptySlots}` : ''}</div>
+      <div class="variant-list">${lines}</div>
+      <div class="variant-actions"><button class="btn tiny primary">Применить</button></div>
     `;
-    const cardsRoot = wrap.querySelector('.variant-cards');
-    const variants = state.variants[group.key] || [];
-
-    if (!variants.length) {
-      const empty = document.createElement('div');
-      empty.className = 'empty-state';
-      empty.textContent = 'Безопасные варианты для этого параметра не найдены.';
-      cardsRoot.appendChild(empty);
-    } else {
-      variants.forEach((cand, idx) => {
-        const slots = materializeSlotsFromCounts(cand.counts);
-        const fishUsed = cand.fishCount > 0;
-        const counts = countSelected(slots);
-        const lines = Object.entries(counts)
-          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ru'))
-          .map(([name, qty]) => `${name} ×${qty}`)
-          .join('<br>');
-
-        const card = document.createElement('div');
-        card.className = 'variant-card';
-        card.innerHTML = `
-          <div class="variant-head">
-            <div class="variant-name">Вариант ${idx + 1}</div>
-            <div class="badge ${fishUsed ? 'no' : 'ok'}">${fishUsed ? 'Есть рыбка' : 'Без рыбки'}</div>
-          </div>
-          <div class="variant-stats">
-            <span class="stat-chip pos">ХП ${cand.totals.health > 0 ? '+' : ''}${cand.totals.health}</span>
-            <span class="stat-chip pos">Кровь ${cand.totals.blood > 0 ? '+' : ''}${cand.totals.blood}</span>
-            <span class="stat-chip pos">Шок ${cand.totals.shock > 0 ? '+' : ''}${cand.totals.shock}</span>
-            <span class="stat-chip pos">Рад ${cand.totals.radBalance > 0 ? '+' : ''}${cand.totals.radBalance}</span>
-            <span class="stat-chip ${cand.totals.water >= 0 ? 'pos' : 'neg'}">Вода ${cand.totals.water > 0 ? '+' : ''}${cand.totals.water}</span>
-            <span class="stat-chip ${cand.totals.food >= 0 ? 'pos' : 'neg'}">Еда ${cand.totals.food > 0 ? '+' : ''}${cand.totals.food}</span>
-          </div>
-          <div class="variant-list">${lines}</div>
-          <div class="variant-actions">
-            <button class="btn tiny primary">Применить</button>
-          </div>
-        `;
-        card.querySelector('button').addEventListener('click', () => {
-          state.slots = slots.slice();
-          saveState();
-          renderAll(false);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-        cardsRoot.appendChild(card);
-      });
-    }
-    variantsRoot.appendChild(wrap);
+    card.querySelector('button').addEventListener('click', () => {
+      state.slots = slots.slice();
+      while (state.slots.length < slotCount) state.slots.push(null);
+      saveState();
+      renderAll(false);
+    });
+    cardsRoot.appendChild(card);
   });
+
+  variantsRoot.appendChild(wrap);
 }
 
 function applyBestBuild() {
   const slotCount = state.beltContainers * 3;
   const pool = buildCandidatePool(slotCount).filter(c => isSafeTotals(c.totals));
   if (!pool.length) {
-    alert('Безопасная сборка из текущего инвентаря не найдена.');
+    alert('Безопасная сборка из текущего инвентаря не найдена. Сначала добери арты, которые закроют здоровье / кровь / шок / радиацию.');
     return;
   }
-  const best = pool.sort((a, b) => finalObjectiveScore(b.totals, b.fishCount, 'balanced') - finalObjectiveScore(a.totals, a.fishCount, 'balanced'))[0];
+  const best = pickTopBalancedVariants(pool, 1)[0] || pool.sort((a, b) => finalObjectiveScore(b.totals, b.fishCount, 'balanced', b.slotUsage) - finalObjectiveScore(a.totals, a.fishCount, 'balanced', a.slotUsage))[0];
   if (!best) {
     alert('Безопасная сборка из текущего инвентаря не найдена.');
     return;
   }
   state.slots = materializeSlotsFromCounts(best.counts);
+  while (state.slots.length < slotCount) state.slots.push(null);
   saveState();
   renderAll(false);
 }
