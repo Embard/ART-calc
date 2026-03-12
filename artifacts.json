@@ -686,7 +686,7 @@
     "isFish": false
   },
   {
-    "name": "Травий",
+    "name": "Гравий",
     "health": -1.0,
     "blood": 0.0,
     "shock": 0.0,
@@ -812,7 +812,7 @@
     "isFish": false
   },
   {
-    "name": "Шнурвал",
+    "name": "Измененный штурвал",
     "health": -1.0,
     "blood": 50.0,
     "shock": 0.0,
