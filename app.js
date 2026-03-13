@@ -539,6 +539,8 @@ function renderBuilder() {
         saveState();
         renderAll();
       });
+      dupBtn.title = 'Дублировать';
+      delBtn.title = 'Убрать';
       dupBtn.addEventListener('click', () => {
         if (!artName) return;
         const freeIndex = state.slots.findIndex((x, idx) => idx !== slotIndex && !x);
