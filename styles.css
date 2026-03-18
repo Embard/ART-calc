@@ -150,3 +150,5 @@ select:focus,input:focus{border-color:#5ec6ff}
   border-color: rgba(94,198,255,.48);
   color: #d7f1ff;
 }
+
+.top-controls .btn{white-space:nowrap}
