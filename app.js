@@ -282,7 +282,9 @@ function getSuggestionsForNeed(need, ownedOnly) {
     if (contrib <= 0) return;
     const remaining = ownedOnly
       ? Math.max(0, Number(state.inventory[art.name] || 0) - (selectedCounts[art.name] || 0))
-      : (state.planSource === 'all' ? state.beltContainers * 3 : Number(state.inventory[art.name] || 0));
+      : (art.isFish
+          ? Number(state.inventory[art.name] || 0)
+          : (state.planSource === 'all' ? state.beltContainers * 3 : Number(state.inventory[art.name] || 0)));
     if (ownedOnly && remaining <= 0) return;
     const potential = ownedOnly ? contrib * remaining : contrib;
     rows.push({ art, remaining, contrib, potential, score:(ownedOnly ? potential : contrib) * fishPenaltyFactor(art) });
@@ -563,8 +565,12 @@ function renderPicker() {
 }
 
 function sourceQuantities(slotCount) {
-  if (state.planSource === 'all') return Array(state.artifacts.length).fill(slotCount);
-  return state.artifacts.map(a => Number(state.inventory[a.name] || 0));
+  return state.artifacts.map(a => {
+    const invQty = Number(state.inventory[a.name] || 0);
+    if (a.isFish) return invQty;
+    if (state.planSource === 'all') return slotCount;
+    return invQty;
+  });
 }
 function lockedCountsArray() {
   const counts = Array(state.artifacts.length).fill(0);
