@@ -58,6 +58,11 @@ const variantsRoot = document.getElementById('variantsRoot');
 const beltButtons = document.getElementById('beltButtons');
 const beltCaption = document.getElementById('beltCaption');
 const planButtons = document.getElementById('planButtons');
+const savesModal = document.getElementById('savesModal');
+const buildPresetNameInput = document.getElementById('buildPresetName');
+const inventoryPresetNameInput = document.getElementById('inventoryPresetName');
+const buildPresetsList = document.getElementById('buildPresetsList');
+const inventoryPresetsList = document.getElementById('inventoryPresetsList');
 
 function normalizeArt(a) {
   return {
@@ -118,9 +123,10 @@ function getNamedStore(key) {
 }
 function setNamedStore(key, obj) { localStorage.setItem(key, JSON.stringify(obj)); }
 
+
 function saveBuildPreset() {
-  const name = (prompt('Название для сохранения сборки:') || '').trim();
-  if (!name) return;
+  const name = (buildPresetNameInput?.value || '').trim();
+  if (!name) return alert('Введи название сборки.');
   const store = getNamedStore(BUILDS_KEY);
   store[name] = {
     beltContainers: state.beltContainers,
@@ -129,14 +135,12 @@ function saveBuildPreset() {
     locked: state.locked
   };
   setNamedStore(BUILDS_KEY, store);
-  alert(`Сборка «${name}» сохранена.`);
+  if (buildPresetNameInput) buildPresetNameInput.value = '';
+  renderSavesModal();
 }
-function loadBuildPreset() {
+function loadBuildPresetByName(name) {
   const store = getNamedStore(BUILDS_KEY);
-  const names = Object.keys(store);
-  if (!names.length) return alert('Сохранённых сборок пока нет.');
-  const name = (prompt(`Доступные сборки:\n- ${names.join('\n- ')}\n\nВведи точное название:`) || '').trim();
-  if (!name || !store[name]) return;
+  if (!store[name]) return;
   const preset = store[name];
   state.beltContainers = (Number.isInteger(preset.beltContainers) && preset.beltContainers >= 1 && preset.beltContainers <= 5) ? preset.beltContainers : 5;
   state.planSource = preset.planSource === 'all' ? 'all' : 'inventory';
@@ -147,27 +151,84 @@ function loadBuildPreset() {
   ensureSlotsLength();
   saveState();
   renderAll();
+  closeSavesModal();
+}
+function deleteBuildPreset(name) {
+  const store = getNamedStore(BUILDS_KEY);
+  delete store[name];
+  setNamedStore(BUILDS_KEY, store);
+  renderSavesModal();
 }
 function saveInventoryPreset() {
-  const name = (prompt('Название для сохранения инвентаря:') || '').trim();
-  if (!name) return;
+  const name = (inventoryPresetNameInput?.value || '').trim();
+  if (!name) return alert('Введи название инвентаря.');
   const store = getNamedStore(INVENTORIES_KEY);
   store[name] = { inventory: state.inventory };
   setNamedStore(INVENTORIES_KEY, store);
-  alert(`Инвентарь «${name}» сохранён.`);
+  if (inventoryPresetNameInput) inventoryPresetNameInput.value = '';
+  renderSavesModal();
 }
-function loadInventoryPreset() {
+function loadInventoryPresetByName(name) {
   const store = getNamedStore(INVENTORIES_KEY);
-  const names = Object.keys(store);
-  if (!names.length) return alert('Сохранённых инвентарей пока нет.');
-  const name = (prompt(`Доступные инвентари:\n- ${names.join('\n- ')}\n\nВведи точное название:`) || '').trim();
-  if (!name || !store[name]) return;
+  if (!store[name]) return;
   const nextInventory = {};
   Object.entries(store[name].inventory || {}).forEach(([k, v]) => nextInventory[canonicalName(k)] = Number(v || 0));
   state.inventory = nextInventory;
   saveState();
   renderAll();
+  closeSavesModal();
 }
+function deleteInventoryPreset(name) {
+  const store = getNamedStore(INVENTORIES_KEY);
+  delete store[name];
+  setNamedStore(INVENTORIES_KEY, store);
+  renderSavesModal();
+}
+function openSavesModal() {
+  if (!savesModal) return;
+  savesModal.classList.remove('hidden');
+  savesModal.setAttribute('aria-hidden', 'false');
+  renderSavesModal();
+}
+function closeSavesModal() {
+  if (!savesModal) return;
+  savesModal.classList.add('hidden');
+  savesModal.setAttribute('aria-hidden', 'true');
+}
+function renderSavesModal() {
+  if (!buildPresetsList || !inventoryPresetsList) return;
+
+  const buildStore = getNamedStore(BUILDS_KEY);
+  const buildNames = Object.keys(buildStore).sort((a,b)=>a.localeCompare(b,'ru'));
+  buildPresetsList.innerHTML = buildNames.length ? '' : '<div class="empty-state">Сборок пока нет.</div>';
+  buildNames.forEach(name => {
+    const row = document.createElement('div');
+    row.className = 'preset-item';
+    row.innerHTML = `<div class="preset-name">${name}</div>
+      <button class="btn iconish">Загрузить</button>
+      <button class="btn iconish">Удалить</button>`;
+    const [loadBtn, delBtn] = row.querySelectorAll('button');
+    loadBtn.addEventListener('click', () => loadBuildPresetByName(name));
+    delBtn.addEventListener('click', () => deleteBuildPreset(name));
+    buildPresetsList.appendChild(row);
+  });
+
+  const invStore = getNamedStore(INVENTORIES_KEY);
+  const invNames = Object.keys(invStore).sort((a,b)=>a.localeCompare(b,'ru'));
+  inventoryPresetsList.innerHTML = invNames.length ? '' : '<div class="empty-state">Инвентарей пока нет.</div>';
+  invNames.forEach(name => {
+    const row = document.createElement('div');
+    row.className = 'preset-item';
+    row.innerHTML = `<div class="preset-name">${name}</div>
+      <button class="btn iconish">Загрузить</button>
+      <button class="btn iconish">Удалить</button>`;
+    const [loadBtn, delBtn] = row.querySelectorAll('button');
+    loadBtn.addEventListener('click', () => loadInventoryPresetByName(name));
+    delBtn.addEventListener('click', () => deleteInventoryPreset(name));
+    inventoryPresetsList.appendChild(row);
+  });
+}
+
 
 function ensureSlotsLength() {
   const wanted = state.beltContainers * 3;
@@ -862,6 +923,24 @@ function getFallbackUnsafeCandidate(slotCount) {
   return pool[0] || null;
 }
 
+
+function describeVariantReason(cand) {
+  const reasons = [];
+  if (cand.totals.health >= 8) reasons.push('держит запас по здоровью');
+  else if (cand.totals.health >= 0) reasons.push('сохраняет здоровье в плюсе');
+
+  if (cand.totals.blood >= 90) reasons.push('почти полностью закрывает кровь');
+  else if (cand.totals.blood >= 0) reasons.push('кровь остаётся в норме');
+
+  if (cand.totals.shock >= 40) reasons.push('даёт хороший запас по шоку');
+  if (cand.totals.radBalance >= 10) reasons.push('уверенно перекрывает радиацию');
+  if (cand.totals.bleedChance <= 0) reasons.push('не даёт порезов');
+  if (cand.fishCount === 0) reasons.push('без рыбки');
+  if (cand.slotUsage < state.beltContainers * 3) reasons.push('оставляет свободные слоты');
+
+  return reasons.slice(0, 3).join(' • ');
+}
+
 function renderVariants() {
   variantsRoot.innerHTML = '';
   const slotCount = state.beltContainers * 3;
@@ -923,6 +1002,7 @@ function renderVariants() {
         <span class="stat-chip ${cand.totals.food >= 0 ? 'pos' : 'neg'}">Еда ${cand.totals.food > 0 ? '+' : ''}${cand.totals.food}</span>
       </div>
       <div class="helper-line">Слотов занято: ${cand.slotUsage}/${slotCount}${emptySlots > 0 ? `, свободно ${emptySlots}` : ''}${lockedUsed ? `, зафиксировано ${lockedUsed}` : ''}</div>
+      <div class="reason-line">${describeVariantReason(cand)}</div>
       <div class="variant-list">${lines}</div>
       <div class="variant-actions"><button class="btn tiny primary">Применить</button></div>
     `;
@@ -1014,10 +1094,9 @@ async function init() {
 document.getElementById('applyBestBtn').addEventListener('click', applyBestBuild);
 document.getElementById('refreshVariantsBtn').addEventListener('click', renderVariants);
 document.getElementById('clearBuildBtn').addEventListener('click', clearBuild);
+document.getElementById('openSavesBtn').addEventListener('click', openSavesModal);
 document.getElementById('saveBuildPresetBtn').addEventListener('click', saveBuildPreset);
-document.getElementById('loadBuildPresetBtn').addEventListener('click', loadBuildPreset);
 document.getElementById('saveInventoryPresetBtn').addEventListener('click', saveInventoryPreset);
-document.getElementById('loadInventoryPresetBtn').addEventListener('click', loadInventoryPreset);
 beltSelect.addEventListener('change', () => { state.beltContainers = Number(beltSelect.value); ensureSlotsLength(); saveState(); renderAll(); });
 planSourceSelect.addEventListener('change', () => { state.planSource = planSourceSelect.value === 'all' ? 'all' : 'inventory'; saveState(); renderAll(); });
 
@@ -1047,6 +1126,11 @@ inventorySearch.addEventListener('input', renderInventory);
 pickerSearch.addEventListener('input', renderPicker);
 pickerOwnedOnly.addEventListener('change', renderPicker);
 pickerModal.addEventListener('click', (e) => { if (e.target.dataset.closePicker === '1') closePicker(); });
+if (savesModal) {
+  savesModal.addEventListener('click', (e) => {
+    if (e.target.dataset.closeSaves === '1') closeSavesModal();
+  });
+}
 window.addEventListener('beforeunload', saveState);
 
 init();
