@@ -22,10 +22,20 @@
             <option value="5" selected>Пояс на 5 контейнеров</option>
           </select>
         </label>
+        <label class="stack">
+          <span>Подбор</span>
+          <select id="planSourceSelect">
+            <option value="inventory" selected>Из инвентаря</option>
+            <option value="all">Все арты</option>
+          </select>
+        </label>
         <button id="applyBestBtn" class="btn primary">Сборка</button>
         <button id="refreshVariantsBtn" class="btn">Обновить варианты</button>
         <button id="clearBuildBtn" class="btn">Очистить</button>
-        <button id="saveStateBtn" class="btn">Сохранить</button>
+        <button id="saveBuildPresetBtn" class="btn">Сохр. сборку</button>
+        <button id="loadBuildPresetBtn" class="btn">Загр. сборку</button>
+        <button id="saveInventoryPresetBtn" class="btn">Сохр. инв.</button>
+        <button id="loadInventoryPresetBtn" class="btn">Загр. инв.</button>
       </div>
     </header>
 
@@ -38,7 +48,7 @@
           </div>
         </div>
         <div class="muted small">
-          Укажи, сколько артов у тебя есть. Подбор и варианты используют только этот инвентарь.
+          Укажи, сколько артов у тебя есть. Подбор из инвентаря использует только эти количества. В режиме «Все арты» сайт строит теоретические сборки и показывает, что нужно искать.
         </div>
         <div class="inventory-list" id="inventoryList"></div>
       </aside>
@@ -52,7 +62,7 @@
             <span class="pill">Из инвентаря: <b id="ownedUsageLabel">0</b></span>
           </div>
         </div>
-        <div class="muted small">Контейнеры — только визуал как в игре. Логика считается по всей сборке целиком.</div>
+        <div class="muted small">Контейнеры — только визуал как в игре. Замок фиксирует слот: при пересборке автоподбор не трогает этот арт.</div>
         <div id="containersRoot" class="containers-root"></div>
       </section>
 
@@ -87,7 +97,7 @@
         </div>
       </div>
       <div class="muted small">
-        Показываются только безопасные и сбалансированные варианты: здоровье, кровь, шок и баланс радиации не уходят в минус. Вода и еда считаются вторичными.
+        Показываются только безопасные и сбалансированные варианты: здоровье ≥ 0, кровь ≥ 100, шок ≥ 0, баланс радиации ≥ 0, шанс пореза ≤ 0. Вода и еда считаются вторичными.
       </div>
       <div id="variantsRoot" class="variants-root"></div>
     </section>
