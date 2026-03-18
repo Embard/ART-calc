@@ -15,23 +15,35 @@
         <h1>Помощник по сборкам артефактов</h1>
       </div>
       <div class="top-controls">
-        <label class="stack">
+        <div class="stack control-group-wrap">
           <span>Пояс</span>
-          <select id="beltSelect">
+          <div class="segmented" id="beltButtons" role="group" aria-label="Пояс">
+            <button class="seg-btn" type="button" data-belt="1">1</button>
+            <button class="seg-btn" type="button" data-belt="2">2</button>
+            <button class="seg-btn" type="button" data-belt="3">3</button>
+            <button class="seg-btn" type="button" data-belt="4">4</button>
+            <button class="seg-btn" type="button" data-belt="5">5</button>
+          </div>
+          <div class="control-caption" id="beltCaption">5 контейнеров (15 слотов)</div>
+          <select id="beltSelect" class="hidden-native-select" aria-hidden="true" tabindex="-1">
             <option value="1">1 контейнер (3 слота)</option>
             <option value="2">2 контейнера (6 слотов)</option>
             <option value="3">3 контейнера (9 слотов)</option>
             <option value="4">4 контейнера (12 слотов)</option>
             <option value="5" selected>5 контейнеров (15 слотов)</option>
           </select>
-        </label>
-        <label class="stack">
+        </div>
+        <div class="stack control-group-wrap">
           <span>Подбор</span>
-          <select id="planSourceSelect">
+          <div class="segmented segmented-wide" id="planButtons" role="group" aria-label="Подбор">
+            <button class="seg-btn" type="button" data-plan="inventory">Из инвентаря</button>
+            <button class="seg-btn" type="button" data-plan="all">Все арты</button>
+          </div>
+          <select id="planSourceSelect" class="hidden-native-select" aria-hidden="true" tabindex="-1">
             <option value="inventory" selected>Из инвентаря</option>
             <option value="all">Все арты</option>
           </select>
-        </label>
+        </div>
         <button id="applyBestBtn" class="btn primary">Сборка</button>
         <button id="refreshVariantsBtn" class="btn">Обновить варианты</button>
         <button id="clearBuildBtn" class="btn">Очистить</button>
