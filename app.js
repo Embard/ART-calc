@@ -63,6 +63,7 @@ const buildPresetNameInput = document.getElementById('buildPresetName');
 const inventoryPresetNameInput = document.getElementById('inventoryPresetName');
 const buildPresetsList = document.getElementById('buildPresetsList');
 const inventoryPresetsList = document.getElementById('inventoryPresetsList');
+const statusClock = document.getElementById('statusClock');
 
 function normalizeArt(a) {
   return {
@@ -299,21 +300,35 @@ function subArtFromTotals(t, art) {
   return t;
 }
 
-function isSafeTotals(t) {
-  return t.health >= 0 && t.blood >= 0 && t.shock >= 0 && t.radBalance >= 0 && t.bleedChance <= 0;
+function hungerDeficit(t) {
+  return Math.max(0, -t.water) + Math.max(0, -t.food);
 }
-function hungryFriendly(health) { return health > 0; }
+function requiredHealthForHunger(t) {
+  return (t.water < 0 || t.food < 0) ? 1 : 0;
+}
+
+function isSafeTotals(t) {
+  return t.health >= 0 &&
+    t.blood >= 0 &&
+    t.shock >= 0 &&
+    t.radBalance >= 0 &&
+    t.bleedChance <= 0 &&
+    t.health >= requiredHealthForHunger(t);
+}
+function hungryFriendly(totals) { return totals.health >= requiredHealthForHunger(totals); }
 
 function getNeeds(totals) {
   const needs = [];
+  const requiredHealth = requiredHealthForHunger(totals);
   if (totals.health < 0) needs.push({ key:'health', name:'Здоровье', amount:Math.abs(totals.health) });
+  if (totals.health >= 0 && totals.health < requiredHealth) needs.push({ key:'health', name:'Здоровье', amount:requiredHealth - totals.health });
   if (totals.blood < 0) needs.push({ key:'blood', name:'Кровь', amount:Math.abs(totals.blood) });
   if (totals.shock < 0) needs.push({ key:'shock', name:'Шок', amount:Math.abs(totals.shock) });
   if (totals.radBalance < 0) needs.push({ key:'radBalance', name:'Баланс радиации', amount:Math.abs(totals.radBalance) });
   if (totals.bleedChance > 0) needs.push({ key:'antiBleed', name:'Шанс пореза', amount:totals.bleedChance });
   if (totals.bleedHeal < 0) needs.push({ key:'bleedHeal', name:'Лечение пореза', amount:Math.abs(totals.bleedHeal) });
 
-  const hungerAllowed = hungryFriendly(totals.health);
+  const hungerAllowed = hungryFriendly(totals);
   if (!hungerAllowed && totals.water < 0) needs.push({ key:'water', name:'Вода', amount:Math.abs(totals.water) });
   if (!hungerAllowed && totals.food < 0) needs.push({ key:'food', name:'Еда', amount:Math.abs(totals.food) });
   return needs;
@@ -371,8 +386,11 @@ function renderTotals() {
     k.textContent = label;
     const v = document.createElement('div');
     v.className = 'total-val';
-    const positive = key === 'bleedChance' ? val <= 0 : val >= 0;
-    v.classList.add(positive ? 'pos' : 'neg');
+    let tone = 'neg';
+    if (key === 'bleedChance') tone = val <= 0 ? 'pos' : 'neg';
+    else if (key === 'blood') tone = val >= 100 ? 'pos' : (val >= 0 ? 'mid' : 'neg');
+    else tone = val >= 0 ? 'pos' : 'neg';
+    v.classList.add(tone);
     v.textContent = `${val > 0 ? '+' : ''}${val}`;
     totalsGrid.appendChild(k);
     totalsGrid.appendChild(v);
@@ -926,18 +944,15 @@ function getFallbackUnsafeCandidate(slotCount) {
 
 function describeVariantReason(cand) {
   const reasons = [];
-  if (cand.totals.health >= 8) reasons.push('держит запас по здоровью');
-  else if (cand.totals.health >= 0) reasons.push('сохраняет здоровье в плюсе');
-
+  if (cand.totals.health >= Math.max(4, requiredHealthForHunger(cand.totals) + 1)) reasons.push('есть запас здоровья под жажду и голод');
+  else if (cand.totals.health >= requiredHealthForHunger(cand.totals)) reasons.push('здоровья хватает, чтобы не умирать от дефицита');
   if (cand.totals.blood >= 90) reasons.push('почти полностью закрывает кровь');
-  else if (cand.totals.blood >= 0) reasons.push('кровь остаётся в норме');
-
+  else if (cand.totals.blood >= 0) reasons.push('кровь остаётся в допустимой зоне');
   if (cand.totals.shock >= 40) reasons.push('даёт хороший запас по шоку');
   if (cand.totals.radBalance >= 10) reasons.push('уверенно перекрывает радиацию');
   if (cand.totals.bleedChance <= 0) reasons.push('не даёт порезов');
   if (cand.fishCount === 0) reasons.push('без рыбки');
   if (cand.slotUsage < state.beltContainers * 3) reasons.push('оставляет свободные слоты');
-
   return reasons.slice(0, 3).join(' • ');
 }
 
@@ -995,7 +1010,7 @@ function renderVariants() {
       </div>
       <div class="variant-stats">
         <span class="stat-chip pos">ХП ${cand.totals.health > 0 ? '+' : ''}${cand.totals.health}</span>
-        <span class="stat-chip ${cand.totals.blood >= 0 ? 'pos' : 'neg'}">Кровь ${cand.totals.blood > 0 ? '+' : ''}${cand.totals.blood}</span>
+        <span class="stat-chip ${cand.totals.blood >= 100 ? 'pos' : (cand.totals.blood >= 0 ? 'mid' : 'neg')}">Кровь ${cand.totals.blood > 0 ? '+' : ''}${cand.totals.blood}</span>
         <span class="stat-chip pos">Шок ${cand.totals.shock > 0 ? '+' : ''}${cand.totals.shock}</span>
         <span class="stat-chip pos">Рад ${cand.totals.radBalance > 0 ? '+' : ''}${cand.totals.radBalance}</span>
         <span class="stat-chip ${cand.totals.water >= 0 ? 'pos' : 'neg'}">Вода ${cand.totals.water > 0 ? '+' : ''}${cand.totals.water}</span>
@@ -1045,6 +1060,14 @@ function clearBuild() {
 }
 
 
+function updateStatusClock() {
+  if (!statusClock) return;
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  statusClock.textContent = `${hh}:${mm}`;
+}
+
 function syncSegmentedControls() {
   if (beltButtons) {
     [...beltButtons.querySelectorAll('[data-belt]')].forEach(btn => {
@@ -1071,6 +1094,7 @@ function syncSegmentedControls() {
 function renderAll(recomputeVariants = true) {
   ensureSlotsLength();
   syncSegmentedControls();
+  updateStatusClock();
   renderInventory();
   renderBuilder();
   renderTotals();
@@ -1134,3 +1158,5 @@ if (savesModal) {
 window.addEventListener('beforeunload', saveState);
 
 init();
+updateStatusClock();
+setInterval(updateStatusClock, 30000);
