@@ -18,8 +18,11 @@
         <label class="stack">
           <span>Пояс</span>
           <select id="beltSelect">
-            <option value="4">Пояс на 4 контейнера</option>
-            <option value="5" selected>Пояс на 5 контейнеров</option>
+            <option value="1">1 контейнер (3 слота)</option>
+            <option value="2">2 контейнера (6 слотов)</option>
+            <option value="3">3 контейнера (9 слотов)</option>
+            <option value="4">4 контейнера (12 слотов)</option>
+            <option value="5" selected>5 контейнеров (15 слотов)</option>
           </select>
         </label>
         <label class="stack">
@@ -97,7 +100,7 @@
         </div>
       </div>
       <div class="muted small">
-        Показываются только безопасные и сбалансированные варианты: здоровье ≥ 0, кровь ≥ 100, шок ≥ 0, баланс радиации ≥ 0, шанс пореза ≤ 0. Вода и еда считаются вторичными.
+        Показываются только безопасные и сбалансированные варианты: здоровье ≥ 0, кровь ≥ 0, шок ≥ 0, баланс радиации ≥ 0, шанс пореза ≤ 0. Кровь до 100 считается желаемой, но не жёстким требованием. Вода и еда считаются вторичными.
       </div>
       <div id="variantsRoot" class="variants-root"></div>
     </section>
