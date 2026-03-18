@@ -55,6 +55,9 @@ const slotCountLabel = document.getElementById('slotCountLabel');
 const filledCountLabel = document.getElementById('filledCountLabel');
 const ownedUsageLabel = document.getElementById('ownedUsageLabel');
 const variantsRoot = document.getElementById('variantsRoot');
+const beltButtons = document.getElementById('beltButtons');
+const beltCaption = document.getElementById('beltCaption');
+const planButtons = document.getElementById('planButtons');
 
 function normalizeArt(a) {
   return {
@@ -955,8 +958,33 @@ function clearBuild() {
   renderAll();
 }
 
+
+function syncSegmentedControls() {
+  if (beltButtons) {
+    [...beltButtons.querySelectorAll('[data-belt]')].forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.belt === String(state.beltContainers));
+    });
+  }
+  if (beltCaption) {
+    const labels = {
+      1:'1 контейнер (3 слота)',
+      2:'2 контейнера (6 слотов)',
+      3:'3 контейнера (9 слотов)',
+      4:'4 контейнера (12 слотов)',
+      5:'5 контейнеров (15 слотов)'
+    };
+    beltCaption.textContent = labels[state.beltContainers] || '';
+  }
+  if (planButtons) {
+    [...planButtons.querySelectorAll('[data-plan]')].forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.plan === state.planSource);
+    });
+  }
+}
+
 function renderAll(recomputeVariants = true) {
   ensureSlotsLength();
+  syncSegmentedControls();
   renderInventory();
   renderBuilder();
   renderTotals();
@@ -986,6 +1014,29 @@ document.getElementById('saveInventoryPresetBtn').addEventListener('click', save
 document.getElementById('loadInventoryPresetBtn').addEventListener('click', loadInventoryPreset);
 beltSelect.addEventListener('change', () => { state.beltContainers = Number(beltSelect.value); ensureSlotsLength(); saveState(); renderAll(); });
 planSourceSelect.addEventListener('change', () => { state.planSource = planSourceSelect.value === 'all' ? 'all' : 'inventory'; saveState(); renderAll(); });
+
+if (beltButtons) {
+  beltButtons.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-belt]');
+    if (!btn) return;
+    state.beltContainers = Number(btn.dataset.belt);
+    beltSelect.value = String(state.beltContainers);
+    ensureSlotsLength();
+    saveState();
+    renderAll();
+  });
+}
+if (planButtons) {
+  planButtons.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-plan]');
+    if (!btn) return;
+    state.planSource = btn.dataset.plan === 'all' ? 'all' : 'inventory';
+    planSourceSelect.value = state.planSource;
+    saveState();
+    renderAll();
+  });
+}
+
 inventorySearch.addEventListener('input', renderInventory);
 pickerSearch.addEventListener('input', renderPicker);
 pickerOwnedOnly.addEventListener('change', renderPicker);
