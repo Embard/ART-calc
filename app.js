@@ -71,6 +71,7 @@ function normalizeArt(a) {
     bleedChance: Number(a.bleedChance || 0),
     bleedHeal: Number(a.bleedHeal || 0),
     isFish: Boolean(a.isFish || canonicalName(a.name).toLowerCase() === 'золотая рыбка'),
+    avoidAuto: canonicalName(a.name) === 'Колючка',
     image: a.image || 'assets/artifacts/placeholder.png'
   };
 }
@@ -91,7 +92,7 @@ function loadState() {
       });
       state.inventory = nextInventory;
     }
-    if (saved.beltContainers === 4 || saved.beltContainers === 5) state.beltContainers = saved.beltContainers;
+    if (Number.isInteger(saved.beltContainers) && saved.beltContainers >= 1 && saved.beltContainers <= 5) state.beltContainers = saved.beltContainers;
     if (saved.planSource === 'all' || saved.planSource === 'inventory') state.planSource = saved.planSource;
     if (Array.isArray(saved.slots)) state.slots = saved.slots.map(v => v ? canonicalName(v) : null);
     if (Array.isArray(saved.locked)) state.locked = saved.locked.map(Boolean);
@@ -134,7 +135,7 @@ function loadBuildPreset() {
   const name = (prompt(`Доступные сборки:\n- ${names.join('\n- ')}\n\nВведи точное название:`) || '').trim();
   if (!name || !store[name]) return;
   const preset = store[name];
-  state.beltContainers = preset.beltContainers === 4 ? 4 : 5;
+  state.beltContainers = (Number.isInteger(preset.beltContainers) && preset.beltContainers >= 1 && preset.beltContainers <= 5) ? preset.beltContainers : 5;
   state.planSource = preset.planSource === 'all' ? 'all' : 'inventory';
   state.slots = Array.isArray(preset.slots) ? preset.slots.map(v => v ? canonicalName(v) : null) : defaultSlots(state.beltContainers);
   state.locked = Array.isArray(preset.locked) ? preset.locked.map(Boolean) : defaultLocks(state.beltContainers);
@@ -235,14 +236,14 @@ function subArtFromTotals(t, art) {
 }
 
 function isSafeTotals(t) {
-  return t.health >= 0 && t.blood >= 100 && t.shock >= 0 && t.radBalance >= 0 && t.bleedChance <= 0;
+  return t.health >= 0 && t.blood >= 0 && t.shock >= 0 && t.radBalance >= 0 && t.bleedChance <= 0;
 }
 function hungryFriendly(health) { return health > 0; }
 
 function getNeeds(totals) {
   const needs = [];
   if (totals.health < 0) needs.push({ key:'health', name:'Здоровье', amount:Math.abs(totals.health) });
-  if (totals.blood < 100) needs.push({ key:'blood', name:'Кровь', amount:Math.abs(100 - totals.blood) });
+  if (totals.blood < 0) needs.push({ key:'blood', name:'Кровь', amount:Math.abs(totals.blood) });
   if (totals.shock < 0) needs.push({ key:'shock', name:'Шок', amount:Math.abs(totals.shock) });
   if (totals.radBalance < 0) needs.push({ key:'radBalance', name:'Баланс радиации', amount:Math.abs(totals.radBalance) });
   if (totals.bleedChance > 0) needs.push({ key:'antiBleed', name:'Шанс пореза', amount:totals.bleedChance });
@@ -273,6 +274,7 @@ function getSuggestionsForNeed(need, ownedOnly) {
   const selectedCounts = countSelected();
   const rows = [];
   state.artifacts.forEach(art => {
+    if (art.avoidAuto) return;
     const contrib = contributionForNeed(art, need.key);
     if (contrib <= 0) return;
     const remaining = ownedOnly
@@ -303,7 +305,7 @@ function renderTotals() {
     k.textContent = label;
     const v = document.createElement('div');
     v.className = 'total-val';
-    const positive = key === 'bleedChance' ? val <= 0 : (key === 'blood' ? val >= 100 : val >= 0);
+    const positive = key === 'bleedChance' ? val <= 0 : val >= 0;
     v.classList.add(positive ? 'pos' : 'neg');
     v.textContent = `${val > 0 ? '+' : ''}${val}`;
     totalsGrid.appendChild(k);
@@ -626,10 +628,11 @@ function penalties(totals, fishCount, riskBleedCount, phase='base') {
   const bleedPenalty = Math.max(0, totals.bleedChance) * (phase === 'final' ? 160 : 24) + Math.max(0, -totals.bleedHeal) * (phase === 'final' ? 45 : 8);
   const fishPenalty = fishCount * (phase === 'final' ? 16000 : 2200);
   const riskPenalty = riskBleedCount * (phase === 'final' ? 8000 : 1200);
-  const softPenalty = waterPenalty * (phase === 'final' ? 0.8 : 0.15) + foodPenalty * (phase === 'final' ? 0.8 : 0.15);
+  const bloodComfortPenalty = Math.max(0, 100 - totals.blood) * (phase === 'final' ? 120 : 14);
+  const softPenalty = waterPenalty * (phase === 'final' ? 0.8 : 0.15) + foodPenalty * (phase === 'final' ? 0.8 : 0.15) + bloodComfortPenalty;
   const hardPenalty =
     Math.max(0, -totals.health) * (phase === 'final' ? 250000 : 15000) +
-    Math.max(0, 100 - totals.blood) * (phase === 'final' ? 180000 : 12000) +
+    Math.max(0, -totals.blood) * (phase === 'final' ? 180000 : 12000) +
     Math.max(0, -totals.shock) * (phase === 'final' ? 160000 : 10000) +
     Math.max(0, -totals.radBalance) * (phase === 'final' ? 170000 : 11000) +
     Math.max(0, totals.bleedChance) * (phase === 'final' ? 120000 : 9000);
@@ -686,6 +689,7 @@ function beamSearch(slotCount, objective, beamWidth=260) {
       for (let idx = 0; idx < state.artifacts.length; idx++) {
         if ((searchQty[idx] || 0) <= cand.counts[idx]) continue;
         const art = state.artifacts[idx];
+        if (art.avoidAuto) continue;
         const counts = cand.counts.slice();
         counts[idx] += 1;
         const totals = cloneTotals(cand.totals);
@@ -748,6 +752,7 @@ function hillClimb(candidate, objective) {
         if (newIdx === oldIdx) continue;
         if (baseCounts[newIdx] >= (searchQty[newIdx] || 0)) continue;
         const newArt = state.artifacts[newIdx];
+        if (newArt.avoidAuto) continue;
         const counts = baseCounts.slice();
         counts[newIdx] += 1;
         const totals = cloneTotals(baseTotals);
@@ -766,6 +771,7 @@ function hillClimb(candidate, objective) {
       for (let idx = 0; idx < state.artifacts.length; idx++) {
         if (current.counts[idx] >= (searchQty[idx] || 0)) continue;
         const art = state.artifacts[idx];
+        if (art.avoidAuto) continue;
         const counts = current.counts.slice();
         counts[idx] += 1;
         const totals = cloneTotals(current.totals);
@@ -862,7 +868,7 @@ function renderVariants() {
 
   if (!safePool.length) {
     const fallback = getFallbackUnsafeCandidate(slotCount);
-    let html = `<div class="empty-state">С учётом зафиксированных артов не найдено ни одной безопасной сборки. Сайт не будет предлагать билд, который ломает здоровье / кровь до 100 / шок / радиацию / даёт положительный шанс пореза.</div>`;
+    let html = `<div class="empty-state">С учётом зафиксированных артов не найдено ни одной безопасной сборки. Сайт не будет предлагать билд, который ломает здоровье / кровь / шок / радиацию / даёт положительный шанс пореза.</div>`;
     if (fallback) {
       const needs = getNeeds(fallback.totals);
       if (needs.length) {
@@ -901,7 +907,7 @@ function renderVariants() {
       </div>
       <div class="variant-stats">
         <span class="stat-chip pos">ХП ${cand.totals.health > 0 ? '+' : ''}${cand.totals.health}</span>
-        <span class="stat-chip ${cand.totals.blood >= 100 ? 'pos' : 'neg'}">Кровь ${cand.totals.blood > 0 ? '+' : ''}${cand.totals.blood}</span>
+        <span class="stat-chip ${cand.totals.blood >= 0 ? 'pos' : 'neg'}">Кровь ${cand.totals.blood > 0 ? '+' : ''}${cand.totals.blood}</span>
         <span class="stat-chip pos">Шок ${cand.totals.shock > 0 ? '+' : ''}${cand.totals.shock}</span>
         <span class="stat-chip pos">Рад ${cand.totals.radBalance > 0 ? '+' : ''}${cand.totals.radBalance}</span>
         <span class="stat-chip ${cand.totals.water >= 0 ? 'pos' : 'neg'}">Вода ${cand.totals.water > 0 ? '+' : ''}${cand.totals.water}</span>
@@ -929,7 +935,7 @@ function applyBestBuild() {
   const slotCount = state.beltContainers * 3;
   const pool = buildCandidatePool(slotCount).filter(c => isSafeTotals(c.totals));
   if (!pool.length) {
-    alert('Безопасная сборка с учётом зафиксированных артов не найдена. Сначала добери арты, которые закроют здоровье / кровь до 100 / шок / радиацию / порезы.');
+    alert('Безопасная сборка с учётом зафиксированных артов не найдена. Сначала добери арты, которые закроют здоровье / кровь / шок / радиацию / порезы.');
     return;
   }
   const best = pickTopBalancedVariants(pool, 1)[0] || pool.sort((a,b) => finalObjectiveScore(b.totals, b.fishCount, b.riskBleedCount, 'balanced', b.slotUsage) - finalObjectiveScore(a.totals, a.fishCount, a.riskBleedCount, 'balanced', a.slotUsage))[0];
