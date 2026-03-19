@@ -70,7 +70,7 @@ function resetTargets() {
   applyBestBuild(true);
 }
 function targetScale(v) {
-  return Math.max(0.25, 1 + Number(v || 0) * 0.35);
+  return Math.max(0.1, 1 + Number(v || 0) * 0.8);
 }
 function activeTargetEntries() {
   return Object.entries(state.targets).filter(([, value]) => Number(value) !== 0);
@@ -894,16 +894,16 @@ function targetBonusScore(totals, phase='base') {
   const bloodTarget = desiredBloodTarget(totals);
   const cappedBlood = Math.min(Math.max(0, totals.blood), bloodTarget);
   return (
-    Math.max(0, totals.health) * w(phase === 'final' ? 140 : 18, 'health') +
-    cappedBlood * w(phase === 'final' ? 18 : 2.2, 'blood') +
-    Math.max(0, totals.shock) * w(phase === 'final' ? 20 : 2.6, 'shock') +
-    totals.water * w(phase === 'final' ? 6 : 0.8, 'water') +
-    totals.food * w(phase === 'final' ? 6 : 0.8, 'food') +
-    Math.max(0, totals.radOut) * w(phase === 'final' ? 8 : 1.0, 'radOut') +
-    (-Math.max(0, totals.radIn)) * w(phase === 'final' ? 8 : 1.0, 'radIn') +
-    Math.max(0, totals.radBalance) * w(phase === 'final' ? 26 : 3.0, 'radBalance') +
-    (-Math.max(0, totals.bleedChance)) * w(phase === 'final' ? 12 : 1.5, 'bleedChance') +
-    Math.max(0, totals.bleedHeal) * w(phase === 'final' ? 10 : 1.2, 'bleedHeal')
+    Math.max(0, totals.health) * w(phase === 'final' ? 300 : 36, 'health') +
+    cappedBlood * w(phase === 'final' ? 36 : 4.4, 'blood') +
+    Math.max(0, totals.shock) * w(phase === 'final' ? 42 : 5.2, 'shock') +
+    totals.water * w(phase === 'final' ? 14 : 1.8, 'water') +
+    totals.food * w(phase === 'final' ? 14 : 1.8, 'food') +
+    Math.max(0, totals.radOut) * w(phase === 'final' ? 18 : 2.1, 'radOut') +
+    (-Math.max(0, totals.radIn)) * w(phase === 'final' ? 18 : 2.1, 'radIn') +
+    Math.max(0, totals.radBalance) * w(phase === 'final' ? 56 : 6.0, 'radBalance') +
+    (-Math.max(0, totals.bleedChance)) * w(phase === 'final' ? 26 : 3.0, 'bleedChance') +
+    Math.max(0, totals.bleedHeal) * w(phase === 'final' ? 22 : 2.6, 'bleedHeal')
   );
 }
 function scoreByObjective(totals, fishCount, riskBleedCount, objective, slotUsage=0, phase='base') {
