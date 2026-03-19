@@ -8,12 +8,24 @@ const state = {
   slots: [],
   locked: [],
   pickerSlotIndex: null,
-  variants: null
+  variants: null,
+  targets: {
+    health: 0,
+    blood: 0,
+    shock: 0,
+    water: 0,
+    food: 0,
+    radOut: 0,
+    radIn: 0,
+    radBalance: 0,
+    bleedChance: 0,
+    bleedHeal: 0
+  }
 };
 
-const STORAGE_KEY = 'stalker-build-helper-v10';
-const BUILDS_KEY = 'stalker-build-helper-v10-build-presets';
-const INVENTORIES_KEY = 'stalker-build-helper-v10-inventory-presets';
+const STORAGE_KEY = 'stalker-build-helper-v23';
+const BUILDS_KEY = 'stalker-build-helper-v23-build-presets';
+const INVENTORIES_KEY = 'stalker-build-helper-v23-inventory-presets';
 
 const NAME_ALIASES = {
   'Шнурвал': 'Измененный штурвал',
@@ -37,11 +49,92 @@ const totalsMeta = [
   ['bleedHeal', 'Лечение пореза']
 ];
 
+const targetLabels = Object.fromEntries(totalsMeta);
+
+function biasClass(v) {
+  if (v > 0) return 'pos';
+  if (v < 0) return 'neg';
+  return 'neu';
+}
+function biasText(v) {
+  return v > 0 ? `+${v}` : String(v);
+}
+function adjustTarget(key, delta) {
+  state.targets[key] = Math.max(-2, Math.min(2, Number(state.targets[key] || 0) + delta));
+  saveState();
+  renderTotals();
+}
+function resetTargets() {
+  Object.keys(state.targets).forEach(key => state.targets[key] = 0);
+  saveState();
+  renderTotals();
+}
+function targetScale(v) {
+  return Math.max(0.25, 1 + Number(v || 0) * 0.35);
+}
+function activeTargetEntries() {
+  return Object.entries(state.targets).filter(([, value]) => Number(value) !== 0);
+}
+function describeActiveTargetsShort() {
+  const active = activeTargetEntries();
+  if (!active.length) return 'Нейтральные цели';
+  return active.map(([key, value]) => `${targetLabels[key]} ${value > 0 ? '↑' : '↓'}`).join(' • ');
+}
+function goalCheckForVariant(key, cand) {
+  const t = cand.totals;
+  const strength = Math.abs(Number(state.targets[key] || 0));
+  if (!strength) return null;
+  const up = Number(state.targets[key]) > 0;
+
+  switch (key) {
+    case 'health':
+      return up ? t.health >= Math.max(requiredHealthForHunger(t) + (strength === 2 ? 3 : 1), 3) : true;
+    case 'blood': {
+      const target = desiredBloodTarget(t);
+      return up ? t.blood >= (strength === 2 ? target : Math.max(50, Math.round(target * 0.7))) : true;
+    }
+    case 'shock':
+      return up ? t.shock >= (strength === 2 ? 50 : 20) : true;
+    case 'water':
+      return up ? t.water >= (strength === 2 ? 0 : -120) : true;
+    case 'food':
+      return up ? t.food >= (strength === 2 ? 0 : -120) : true;
+    case 'radOut':
+      return up ? t.radOut >= (strength === 2 ? 150 : 70) : true;
+    case 'radIn':
+      return up ? t.radIn <= (strength === 2 ? 20 : 60) : true;
+    case 'radBalance':
+      return up ? t.radBalance >= (strength === 2 ? 25 : 10) : true;
+    case 'bleedChance':
+      return up ? t.bleedChance <= (strength === 2 ? -50 : 0) : true;
+    case 'bleedHeal':
+      return up ? t.bleedHeal >= (strength === 2 ? 100 : 40) : true;
+    default:
+      return true;
+  }
+}
+function describeGoalFit(cand) {
+  const active = activeTargetEntries();
+  if (!active.length) return 'Цели: нейтральные';
+  const met = [];
+  const missed = [];
+  active.forEach(([key, value]) => {
+    const okay = goalCheckForVariant(key, cand);
+    const short = `${targetLabels[key]} ${value > 0 ? '↑' : '↓'}`;
+    if (okay) met.push(short);
+    else missed.push(short);
+  });
+  const metText = met.length ? `выполнено: ${met.join(', ')}` : 'выполнено: —';
+  const missText = missed.length ? `не дотянуто: ${missed.join(', ')}` : 'не дотянуто: —';
+  return `${metText} | ${missText}`;
+}
+
 const beltSelect = document.getElementById('beltSelect');
 const planSourceSelect = document.getElementById('planSourceSelect');
 const inventoryList = document.getElementById('inventoryList');
 const containersRoot = document.getElementById('containersRoot');
 const totalsGrid = document.getElementById('totalsGrid');
+const targetControls = document.getElementById('targetControls');
 const needsList = document.getElementById('needsList');
 const ownedSuggestions = document.getElementById('ownedSuggestions');
 const missingSuggestions = document.getElementById('missingSuggestions');
@@ -63,6 +156,8 @@ const buildPresetNameInput = document.getElementById('buildPresetName');
 const inventoryPresetNameInput = document.getElementById('inventoryPresetName');
 const buildPresetsList = document.getElementById('buildPresetsList');
 const inventoryPresetsList = document.getElementById('inventoryPresetsList');
+const rebuildByTargetsBtn = document.getElementById('rebuildByTargetsBtn');
+const resetTargetsBtn = document.getElementById('resetTargetsBtn');
 const statusClock = document.getElementById('statusClock');
 
 function normalizeArt(a) {
@@ -103,6 +198,12 @@ function loadState() {
     }
     if (Number.isInteger(saved.beltContainers) && saved.beltContainers >= 1 && saved.beltContainers <= 5) state.beltContainers = saved.beltContainers;
     if (saved.planSource === 'all' || saved.planSource === 'inventory') state.planSource = saved.planSource;
+    if (saved.targets && typeof saved.targets === 'object') {
+      Object.keys(state.targets).forEach(key => {
+        const raw = Number(saved.targets[key] || 0);
+        state.targets[key] = Math.max(-2, Math.min(2, raw));
+      });
+    }
     if (Array.isArray(saved.slots)) state.slots = saved.slots.map(v => v ? canonicalName(v) : null);
     if (Array.isArray(saved.locked)) state.locked = saved.locked.map(Boolean);
   } catch {}
@@ -113,6 +214,7 @@ function saveState() {
     inventory: state.inventory,
     beltContainers: state.beltContainers,
     planSource: state.planSource,
+    targets: state.targets,
     slots: state.slots,
     locked: state.locked
   }));
@@ -132,6 +234,7 @@ function saveBuildPreset() {
   store[name] = {
     beltContainers: state.beltContainers,
     planSource: state.planSource,
+    targets: state.targets,
     slots: state.slots,
     locked: state.locked
   };
@@ -145,6 +248,14 @@ function loadBuildPresetByName(name) {
   const preset = store[name];
   state.beltContainers = (Number.isInteger(preset.beltContainers) && preset.beltContainers >= 1 && preset.beltContainers <= 5) ? preset.beltContainers : 5;
   state.planSource = preset.planSource === 'all' ? 'all' : 'inventory';
+  if (preset.targets && typeof preset.targets === 'object') {
+    Object.keys(state.targets).forEach(key => {
+      const raw = Number(preset.targets[key] || 0);
+      state.targets[key] = Math.max(-2, Math.min(2, raw));
+    });
+  } else {
+    Object.keys(state.targets).forEach(key => state.targets[key] = 0);
+  }
   state.slots = Array.isArray(preset.slots) ? preset.slots.map(v => v ? canonicalName(v) : null) : defaultSlots(state.beltContainers);
   state.locked = Array.isArray(preset.locked) ? preset.locked.map(Boolean) : defaultLocks(state.beltContainers);
   beltSelect.value = String(state.beltContainers);
@@ -306,6 +417,22 @@ function hungerDeficit(t) {
 function requiredHealthForHunger(t) {
   return (t.water < 0 || t.food < 0) ? 1 : 0;
 }
+function hasWireEffect(t) {
+  return t.bleedHeal >= 100;
+}
+function desiredBloodTarget(t) {
+  return hasWireEffect(t) ? 50 : 100;
+}
+function normalizedBloodScore(t) {
+  const target = desiredBloodTarget(t);
+  const capped = Math.max(0, Math.min(t.blood, target));
+  const base = target > 0 ? capped / target : 1;
+  const over = Math.max(0, t.blood - target);
+  return clamp(base + Math.min(over / 80, 0.2), 0, 1.2);
+}
+function canHoldEmission(t) {
+  return t.health >= 9 && t.shock >= 20;
+}
 
 function isSafeTotals(t) {
   return t.health >= 0 &&
@@ -376,6 +503,28 @@ function estimateMissing(need) {
   return { art: best.art, countNeeded: Math.ceil(need.amount / Math.max(best.contrib, 1)) };
 }
 
+
+function renderTargetControls() {
+  if (!targetControls) return;
+  targetControls.innerHTML = '';
+  totalsMeta.forEach(([key, label]) => {
+    const row = document.createElement('div');
+    row.className = 'target-row';
+    row.innerHTML = `
+      <div class="target-name">${label}</div>
+      <div class="target-stepper">
+        <button class="target-btn" type="button" data-key="${key}" data-delta="-1">−</button>
+        <div class="target-value ${biasClass(state.targets[key] || 0)}">${biasText(state.targets[key] || 0)}</div>
+        <button class="target-btn" type="button" data-key="${key}" data-delta="1">+</button>
+      </div>
+    `;
+    row.querySelectorAll('.target-btn').forEach(btn => {
+      btn.addEventListener('click', () => adjustTarget(btn.dataset.key, Number(btn.dataset.delta)));
+    });
+    targetControls.appendChild(row);
+  });
+}
+
 function renderTotals() {
   const totals = getTotals();
   totalsGrid.innerHTML = '';
@@ -395,6 +544,7 @@ function renderTotals() {
     totalsGrid.appendChild(k);
     totalsGrid.appendChild(v);
   });
+  renderTargetControls();
   renderNeeds(getNeeds(totals));
 }
 
@@ -690,9 +840,10 @@ function signatureFromCounts(counts) { return counts.join('|'); }
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
 function normalizedCore(totals) {
+  const bloodNorm = normalizedBloodScore(totals);
   return {
     health: clamp(Math.max(0, totals.health) / 12, 0, 1.5),
-    blood: clamp(Math.max(0, Math.min(totals.blood, 100)) / 100, 0, 1),
+    blood: bloodNorm,
     shock: clamp(Math.max(0, totals.shock) / 50, 0, 1.5),
     radBalance: clamp(Math.max(0, totals.radBalance) / 20, 0, 1.5)
   };
@@ -703,11 +854,14 @@ function balancedCoreScore(totals, slotUsage = 0) {
   const strongest = Math.max(n.health, n.blood, n.shock, n.radBalance);
   const avg = (n.health + n.blood + n.shock + n.radBalance) / 4;
   const spreadPenalty = (strongest - weakest) * 12000;
+  const bloodTarget = desiredBloodTarget(totals);
+  const bloodComfortBase = hasWireEffect(totals) ? 35 : 70;
   const comfortBonus =
     Math.max(0, totals.health - 8) * 220 +
-    Math.max(0, Math.min(totals.blood, 100) - 70) * 55 +
-    Math.max(0, totals.shock - 30) * 65 +
-    Math.max(0, totals.radBalance - 10) * 55;
+    Math.max(0, Math.min(totals.blood, bloodTarget) - bloodComfortBase) * 55 +
+    Math.max(0, totals.shock - 20) * 70 +
+    Math.max(0, totals.radBalance - 10) * 55 +
+    (canHoldEmission(totals) ? 2600 : 0);
   return weakest * 52000 + avg * 15000 - spreadPenalty + comfortBonus + slotUsage * 4;
 }
 function penalties(totals, fishCount, riskBleedCount, phase='base') {
@@ -716,8 +870,10 @@ function penalties(totals, fishCount, riskBleedCount, phase='base') {
   const bleedPenalty = Math.max(0, totals.bleedChance) * (phase === 'final' ? 160 : 24) + Math.max(0, -totals.bleedHeal) * (phase === 'final' ? 45 : 8);
   const fishPenalty = fishCount * (phase === 'final' ? 16000 : 2200);
   const riskPenalty = riskBleedCount * (phase === 'final' ? 8000 : 1200);
-  const bloodComfortPenalty = Math.max(0, 100 - totals.blood) * (phase === 'final' ? 120 : 14);
-  const softPenalty = waterPenalty * (phase === 'final' ? 0.8 : 0.15) + foodPenalty * (phase === 'final' ? 0.8 : 0.15) + bloodComfortPenalty;
+  const bloodTarget = desiredBloodTarget(totals);
+  const bloodComfortPenalty = Math.max(0, bloodTarget - totals.blood) * (phase === 'final' ? 95 : 11);
+  const emissionMissPenalty = (!canHoldEmission(totals) && (totals.health >= 7 || totals.shock >= 15)) ? (phase === 'final' ? 1400 : 180) : 0;
+  const softPenalty = waterPenalty * (phase === 'final' ? 0.8 : 0.15) + foodPenalty * (phase === 'final' ? 0.8 : 0.15) + bloodComfortPenalty + emissionMissPenalty;
   const hardPenalty =
     Math.max(0, -totals.health) * (phase === 'final' ? 250000 : 15000) +
     Math.max(0, -totals.blood) * (phase === 'final' ? 180000 : 12000) +
@@ -726,17 +882,37 @@ function penalties(totals, fishCount, riskBleedCount, phase='base') {
     Math.max(0, totals.bleedChance) * (phase === 'final' ? 120000 : 9000);
   return { softPenalty, bleedPenalty, fishPenalty, riskPenalty, hardPenalty };
 }
+
+function targetBonusScore(totals, phase='base') {
+  const w = (base, key) => base * targetScale(state.targets[key] || 0);
+  const bloodTarget = desiredBloodTarget(totals);
+  const cappedBlood = Math.min(Math.max(0, totals.blood), bloodTarget);
+  return (
+    Math.max(0, totals.health) * w(phase === 'final' ? 140 : 18, 'health') +
+    cappedBlood * w(phase === 'final' ? 18 : 2.2, 'blood') +
+    Math.max(0, totals.shock) * w(phase === 'final' ? 20 : 2.6, 'shock') +
+    totals.water * w(phase === 'final' ? 6 : 0.8, 'water') +
+    totals.food * w(phase === 'final' ? 6 : 0.8, 'food') +
+    Math.max(0, totals.radOut) * w(phase === 'final' ? 8 : 1.0, 'radOut') +
+    (-Math.max(0, totals.radIn)) * w(phase === 'final' ? 8 : 1.0, 'radIn') +
+    Math.max(0, totals.radBalance) * w(phase === 'final' ? 26 : 3.0, 'radBalance') +
+    (-Math.max(0, totals.bleedChance)) * w(phase === 'final' ? 12 : 1.5, 'bleedChance') +
+    Math.max(0, totals.bleedHeal) * w(phase === 'final' ? 10 : 1.2, 'bleedHeal')
+  );
+}
 function scoreByObjective(totals, fishCount, riskBleedCount, objective, slotUsage=0, phase='base') {
   const n = normalizedCore(totals);
   const balance = balancedCoreScore(totals, slotUsage);
   const p = penalties(totals, fishCount, riskBleedCount, phase);
-  const common = balance - p.softPenalty - p.bleedPenalty - p.fishPenalty - p.riskPenalty - p.hardPenalty;
+  const emissionBonus = canHoldEmission(totals) ? (phase === 'final' ? 3200 : 380) : 0;
+  const targetsBonus = targetBonusScore(totals, phase);
+  const common = balance - p.softPenalty - p.bleedPenalty - p.fishPenalty - p.riskPenalty - p.hardPenalty + emissionBonus + targetsBonus;
 
   switch (objective) {
     case 'health':
       return common + n.health * (phase === 'final' ? 9000 : 1200) + totals.health * (phase === 'final' ? 220 : 28) + n.shock * 700 + n.radBalance * 700 + n.blood * 400;
     case 'blood':
-      return common + n.blood * (phase === 'final' ? 8000 : 1050) + Math.min(totals.blood, 100) * (phase === 'final' ? 85 : 10) + n.health * 700 + n.shock * 650 + n.radBalance * 650;
+      return common + n.blood * (phase === 'final' ? 8000 : 1050) + Math.min(totals.blood, desiredBloodTarget(totals)) * (phase === 'final' ? 85 : 10) + n.health * 700 + n.shock * 650 + n.radBalance * 650;
     case 'shock':
       return common + n.shock * (phase === 'final' ? 9000 : 1200) + totals.shock * (phase === 'final' ? 120 : 15) + n.health * 800 + n.blood * 550 + n.radBalance * 650;
     case 'radBalance':
@@ -944,15 +1120,25 @@ function getFallbackUnsafeCandidate(slotCount) {
 
 function describeVariantReason(cand) {
   const reasons = [];
-  if (cand.totals.health >= Math.max(4, requiredHealthForHunger(cand.totals) + 1)) reasons.push('есть запас здоровья под жажду и голод');
-  else if (cand.totals.health >= requiredHealthForHunger(cand.totals)) reasons.push('здоровья хватает, чтобы не умирать от дефицита');
-  if (cand.totals.blood >= 90) reasons.push('почти полностью закрывает кровь');
-  else if (cand.totals.blood >= 0) reasons.push('кровь остаётся в допустимой зоне');
-  if (cand.totals.shock >= 40) reasons.push('даёт хороший запас по шоку');
-  if (cand.totals.radBalance >= 10) reasons.push('уверенно перекрывает радиацию');
-  if (cand.totals.bleedChance <= 0) reasons.push('не даёт порезов');
+  const t = cand.totals;
+
+  if (t.health >= Math.max(3, requiredHealthForHunger(t) + 2)) reasons.push('есть хороший запас здоровья');
+  else if (t.health >= requiredHealthForHunger(t)) reasons.push('здоровья хватает для выживания');
+
+  if (t.blood >= 100) reasons.push('полностью закрывает кровь');
+  else if (hasWireEffect(t) && t.blood >= 50) reasons.push('кровь в норме за счёт проволоки');
+  else if (t.blood >= 70) reasons.push('даёт хороший запас по крови');
+  else if (t.blood >= 50) reasons.push('кровь выше среднего');
+
+  if (t.shock >= 50) reasons.push('даёт отличный запас по шоку');
+  else if (t.shock >= 20) reasons.push('держит шок в хорошем диапазоне');
+
+  if (canHoldEmission(t)) reasons.push('держит выброс');
+  if (t.radBalance >= 10) reasons.push('уверенно перекрывает радиацию');
+  if (t.bleedChance <= 0) reasons.push('не даёт порезов');
   if (cand.fishCount === 0) reasons.push('без рыбки');
   if (cand.slotUsage < state.beltContainers * 3) reasons.push('оставляет свободные слоты');
+
   return reasons.slice(0, 3).join(' • ');
 }
 
@@ -991,7 +1177,7 @@ function renderVariants() {
 
   const wrap = document.createElement('div');
   wrap.className = 'variant-group';
-  wrap.innerHTML = `<div class="variant-group-title"><div class="variant-name">Альтернативные баланс-сборки</div><div class="badge">${state.planSource === 'all' ? 'Все арты' : 'Из инвентаря'}</div></div><div class="variant-cards"></div>`;
+  wrap.innerHTML = `<div class="variant-group-title"><div><div class="variant-name">Альтернативные баланс-сборки</div><div class="helper-line" style="margin-top:4px">${describeActiveTargetsShort()}</div></div><div class="badge">${state.planSource === 'all' ? 'Все арты' : 'Из инвентаря'}</div></div><div class="variant-cards"></div>`;
   const cardsRoot = wrap.querySelector('.variant-cards');
 
   variants.forEach((cand, idx) => {
@@ -1018,6 +1204,7 @@ function renderVariants() {
       </div>
       <div class="helper-line">Слотов занято: ${cand.slotUsage}/${slotCount}${emptySlots > 0 ? `, свободно ${emptySlots}` : ''}${lockedUsed ? `, зафиксировано ${lockedUsed}` : ''}</div>
       <div class="reason-line">${describeVariantReason(cand)}</div>
+      <div class="goal-fit-line">${describeGoalFit(cand)}</div>
       <div class="variant-list">${lines}</div>
       <div class="variant-actions"><button class="btn tiny primary">Применить</button></div>
     `;
@@ -1121,6 +1308,8 @@ document.getElementById('clearBuildBtn').addEventListener('click', clearBuild);
 document.getElementById('openSavesBtn').addEventListener('click', openSavesModal);
 document.getElementById('saveBuildPresetBtn').addEventListener('click', saveBuildPreset);
 document.getElementById('saveInventoryPresetBtn').addEventListener('click', saveInventoryPreset);
+if (rebuildByTargetsBtn) rebuildByTargetsBtn.addEventListener('click', applyBestBuild);
+if (resetTargetsBtn) resetTargetsBtn.addEventListener('click', () => { resetTargets(); renderVariants(); });
 beltSelect.addEventListener('change', () => { state.beltContainers = Number(beltSelect.value); ensureSlotsLength(); saveState(); renderAll(); });
 planSourceSelect.addEventListener('change', () => { state.planSource = planSourceSelect.value === 'all' ? 'all' : 'inventory'; saveState(); renderAll(); });
 
