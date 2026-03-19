@@ -8,8 +8,7 @@
 </head>
 <body>
   <div class="bg"></div>
-  <div class="zone-rad-badge" aria-hidden="true">☢</div>
-  <div class="app">
+    <div class="app">
     <header class="topbar glass">
       <div class="brand">
         <div class="eyebrow">ZONE FIELD PDA // ARTIFACT LOADOUT TERMINAL</div>
@@ -56,19 +55,8 @@
           <button id="openSavesBtn" class="btn">Сохранения</button>
         </div>
       </div>
+      <div class="zone-rad-badge" aria-hidden="true">☢</div>
     </header>
-
-    <div class="status-strip glass">
-      <div class="status-left">
-        <span class="status-pill">PDA LINK: STABLE</span>
-        <span class="status-pill">ZONE: ONLINE</span>
-        <span class="status-pill">ANOMALY ANALYSIS</span>
-      </div>
-      <div class="status-right">
-        <span class="status-pill rad-pill"><span class="rad-inline">☢</span> RAD SAFE MODE</span>
-        <span class="status-pill" id="statusClock">--:--</span>
-      </div>
-    </div>
 
     <main class="layout">
       <aside class="panel glass inventory-panel">
@@ -102,6 +90,16 @@
           <h2>Итог</h2>
         </div>
         <div id="totalsGrid" class="totals-grid"></div>
+
+        <div class="subpanel">
+          <div class="subpanel-title">Тонкая настройка</div>
+          <div class="muted small">Кнопки +/- меняют приоритет автоподбора, а не редактируют итог вручную.</div>
+          <div id="targetControls" class="target-controls"></div>
+          <div class="target-actions">
+            <button id="rebuildByTargetsBtn" class="btn primary tiny">Пересобрать по целям</button>
+            <button id="resetTargetsBtn" class="btn tiny">Сбросить цели</button>
+          </div>
+        </div>
 
         <div class="subpanel">
           <div class="subpanel-title">Что нужно закрыть</div>
