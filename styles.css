@@ -431,3 +431,286 @@ h1{font-size:23px !important; line-height:1.04 !important}
   }
   .segmented-wide{grid-auto-columns:minmax(92px,1fr) !important}
 }
+
+
+/* v26 compact two-column recovery */
+.layout{
+  grid-template-columns:260px minmax(0,1fr) 290px !important;
+  gap:10px !important;
+  align-items:start !important;
+}
+.inventory-panel{grid-area:auto}
+.builder-panel{grid-area:auto}
+.sidebar-panel{grid-area:auto; gap:6px !important}
+.panel{padding:8px !important}
+.panel-title-row{
+  padding:5px 7px !important;
+  margin-bottom:5px !important;
+}
+.topbar{
+  padding:9px 10px !important;
+  gap:10px !important;
+}
+h1{font-size:21px !important}
+.brand-note{
+  font-size:10.5px !important;
+  max-width:360px !important;
+}
+.control-box,.action-box{
+  padding:5px !important;
+  gap:6px !important;
+}
+.seg-btn{
+  min-height:30px !important;
+  padding:6px 9px !important;
+  font-size:10px !important;
+}
+.btn{
+  padding:7px 9px !important;
+  font-size:10px !important;
+}
+.control-caption{font-size:10px !important}
+.zone-rad-badge{
+  width:128px !important;
+  height:128px !important;
+  font-size:78px !important;
+  right:-14px !important;
+  top:-14px !important;
+}
+.inventory-list{
+  margin-top:6px !important;
+  gap:4px !important;
+}
+.inventory-item{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) 82px !important;
+  gap:6px !important;
+  padding:4px 6px !important;
+}
+.inventory-main{
+  grid-template-columns:40px minmax(0,1fr) !important;
+  gap:6px !important;
+}
+.inventory-thumb{
+  width:40px !important;
+  height:40px !important;
+}
+.inventory-name{
+  font-size:12px !important;
+  line-height:1.05 !important;
+}
+.inventory-meta{
+  margin-top:2px !important;
+  gap:3px !important;
+}
+.inventory-meta .stat-chip{
+  font-size:9px !important;
+  padding:1px 4px !important;
+}
+.qty-stepper{
+  min-width:82px !important;
+  padding:3px 4px !important;
+  gap:4px !important;
+}
+.qty-btn{
+  width:22px !important;
+  height:22px !important;
+  font-size:15px !important;
+}
+.qty-value{
+  font-size:13px !important;
+}
+.pill{
+  padding:4px 7px !important;
+  font-size:10px !important;
+}
+.containers-root{
+  gap:8px !important;
+  margin-top:6px !important;
+}
+.container-card{box-shadow:none !important}
+.container-head{
+  padding:5px 8px !important;
+}
+.container-title{
+  font-size:12px !important;
+  letter-spacing:.03em !important;
+}
+.container-head .pill{
+  padding:3px 6px !important;
+}
+.container-slots{
+  gap:4px !important;
+  padding:6px !important;
+  grid-template-columns:repeat(3, minmax(0,1fr)) !important;
+}
+.slot-main{
+  min-height:62px !important;
+  padding:5px 4px !important;
+  gap:4px !important;
+}
+.slot-icon{
+  width:28px !important;
+  height:28px !important;
+  font-size:13px !important;
+}
+.slot-icon.has-image img{
+  padding:2px !important;
+}
+.slot-name{
+  font-size:10px !important;
+  line-height:1.1 !important;
+}
+.slot-name .stat-chip{
+  font-size:8px !important;
+  padding:1px 3px !important;
+}
+.slot-name .small,.slot-name .muted{
+  font-size:8px !important;
+}
+.slot-actions{
+  gap:3px !important;
+}
+.icon-action{
+  width:22px !important;
+  height:22px !important;
+  font-size:11px !important;
+}
+.totals-grid{
+  gap:4px !important;
+}
+.total-row{
+  padding:4px 5px !important;
+  grid-template-columns:minmax(0,1fr) auto !important;
+  gap:5px !important;
+}
+.total-key{
+  font-size:11px !important;
+}
+.total-bias{
+  min-width:20px !important;
+  padding:1px 4px !important;
+  font-size:8px !important;
+}
+.total-control{
+  grid-template-columns:20px 66px 20px !important;
+  gap:3px !important;
+}
+.total-step{
+  width:20px !important;
+  height:20px !important;
+  font-size:13px !important;
+}
+.total-val{
+  min-width:66px !important;
+  padding:4px 5px !important;
+  font-size:11px !important;
+}
+.totals-hint{
+  font-size:10px !important;
+  margin-bottom:3px !important;
+}
+.subpanel{
+  padding:6px !important;
+}
+.subpanel-title{
+  font-size:11px !important;
+  margin-bottom:4px !important;
+}
+.need-item,.suggest-item{
+  padding:5px !important;
+}
+.need-name,.suggest-name{
+  font-size:11px !important;
+}
+.badge{
+  font-size:9px !important;
+  padding:3px 6px !important;
+}
+.helper-line{
+  font-size:9.5px !important;
+  margin-top:3px !important;
+  line-height:1.3 !important;
+}
+.variants-panel{
+  margin-top:8px !important;
+}
+.variant-cards{
+  grid-template-columns:repeat(auto-fit,minmax(215px,1fr)) !important;
+  gap:6px !important;
+}
+.variant-card{
+  padding:6px !important;
+  gap:4px !important;
+}
+.variant-name{
+  font-size:12px !important;
+}
+.variant-stats{
+  gap:3px !important;
+}
+.variant-stats .stat-chip{
+  font-size:9px !important;
+  padding:1px 4px !important;
+}
+.reason-line,.goal-fit-line{
+  padding:3px 5px !important;
+  font-size:9px !important;
+}
+.variant-list{
+  min-height:46px !important;
+  padding:5px !important;
+  font-size:10px !important;
+  line-height:1.3 !important;
+}
+.variant-actions .btn{
+  padding:6px 8px !important;
+  font-size:10px !important;
+}
+.modal-card{
+  padding:10px !important;
+}
+.pick-card{
+  padding:7px !important;
+}
+.pick-meta .stat-chip{
+  font-size:9px !important;
+  padding:1px 4px !important;
+}
+.empty-state{
+  padding:8px !important;
+  font-size:11px !important;
+}
+
+@media (max-width:1280px){
+  .layout{
+    grid-template-columns:240px minmax(0,1fr) !important;
+    grid-template-areas:
+      "inventory builder"
+      "sidebar sidebar" !important;
+  }
+  .inventory-panel{grid-area:inventory !important; position:sticky !important; top:10px !important; max-height:calc(100vh - 20px) !important;}
+  .builder-panel{grid-area:builder !important;}
+  .sidebar-panel{grid-area:sidebar !important; position:static !important; max-height:none !important;}
+}
+
+@media (max-width:980px){
+  .layout{
+    grid-template-columns:1fr !important;
+    grid-template-areas:none !important;
+  }
+  .inventory-panel,.builder-panel,.sidebar-panel{
+    grid-area:auto !important;
+    position:static !important;
+    max-height:none !important;
+  }
+}
+
+@media (max-width:760px){
+  .inventory-item{
+    grid-template-columns:1fr !important;
+  }
+  .container-slots{
+    grid-template-columns:1fr !important;
+  }
+}
