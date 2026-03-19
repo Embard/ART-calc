@@ -52,7 +52,7 @@
           <button id="applyBestBtn" class="btn primary">Автосборка</button>
           <button id="refreshVariantsBtn" class="btn">Варианты</button>
           <button id="clearBuildBtn" class="btn">Очистить</button>
-          <button id="openSavesBtn" class="btn">Сохранения</button>
+          <button id="openSavesBtn" class="btn">Сохранить / загрузить</button>
         </div>
       </div>
       <div class="zone-rad-badge" aria-hidden="true">☢</div>
@@ -63,7 +63,7 @@
         <div class="panel-title-row">
           <h2>Инвентарь</h2>
           <div class="toolbar">
-            <input id="inventorySearch" type="search" placeholder="Поиск арта..." />
+            <input id="inventorySearch" type="search" placeholder="Поиск..." />
           </div>
         </div>
         <div class="muted small">
@@ -74,7 +74,7 @@
 
       <section class="panel glass builder-panel">
         <div class="panel-title-row">
-          <h2>Автосборка</h2>
+          <h2>Сборка</h2>
           <div class="toolbar">
             <span class="pill">Слотов: <b id="slotCountLabel">15</b></span>
             <span class="pill">Заполнено: <b id="filledCountLabel">0</b></span>
@@ -96,19 +96,22 @@
           <button id="resetTargetsBtn" class="btn tiny">Сбросить приоритеты</button>
         </div>
 
-        <div class="subpanel">
-          <div class="subpanel-title">Что нужно закрыть</div>
-          <div id="needsList" class="needs-list"></div>
-        </div>
-
-        <div class="subpanel">
-          <div class="subpanel-title">Чем закрыть из твоего</div>
-          <div id="ownedSuggestions" class="suggestions-list"></div>
-        </div>
-
-        <div class="subpanel">
-          <div class="subpanel-title">Если не хватает</div>
-          <div id="missingSuggestions" class="suggestions-list"></div>
+        <div class="subpanel compact-summary">
+          <div class="subpanel-title">Сводка по сборке</div>
+          <div class="summary-mini">
+            <div class="summary-section">
+              <div class="summary-label">Что нужно закрыть</div>
+              <div id="needsList" class="needs-list"></div>
+            </div>
+            <div class="summary-section">
+              <div class="summary-label">Чем закрыть из твоего</div>
+              <div id="ownedSuggestions" class="suggestions-list"></div>
+            </div>
+            <div class="summary-section">
+              <div class="summary-label">Если не хватает</div>
+              <div id="missingSuggestions" class="suggestions-list"></div>
+            </div>
+          </div>
         </div>
       </aside>
     </main>
@@ -121,7 +124,7 @@
         </div>
       </div>
       <div class="muted small">
-        Только безопасные варианты.
+        Только безопасные варианты. Кнопка «Варианты» пересчитывает и прокручивает к списку.
       </div>
       <div id="variantsRoot" class="variants-root"></div>
     </section>
@@ -155,7 +158,7 @@
       <div class="modal-header">
         <div>
           <div class="eyebrow">ZONE PDA MEMORY</div>
-          <h3>Сохранения</h3>
+          <h3>Сохранить / загрузить</h3>
         </div>
         <button class="icon-btn" data-close-saves="1" aria-label="Закрыть">✕</button>
       </div>
@@ -191,7 +194,6 @@
       </button>
       <div class="slot-actions">
         <button class="icon-action lock-btn" type="button" title="Зафиксировать" aria-label="Зафиксировать">🔓</button>
-        <button class="icon-action duplicate-btn" type="button" title="Дублировать" aria-label="Дублировать">⧉</button>
         <button class="icon-action remove-btn" type="button" title="Убрать" aria-label="Убрать">✕</button>
       </div>
     </div>
