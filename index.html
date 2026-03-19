@@ -11,8 +11,8 @@
     <div class="app">
     <header class="topbar glass">
       <div class="brand">
-        <div class="eyebrow">ZONE FIELD PDA // ARTIFACT LOADOUT TERMINAL</div>
-        <h1>Помощник по сборкам артефактов</h1><div class="brand-note">Подбор безопасных артефактных сборок с фиксацией слотов, сохранениями и режимом теоретического поиска.</div>
+        <div class="eyebrow">ZONE PDA // LOADOUT</div>
+        <h1>Помощник по сборкам артефактов</h1><div class="brand-note">Безопасный автоподбор артефактных сборок.</div>
       </div>
       
       <div class="top-controls">
@@ -49,7 +49,7 @@
         </div>
 
         <div class="action-box">
-          <button id="applyBestBtn" class="btn primary">Сборка</button>
+          <button id="applyBestBtn" class="btn primary">Автосборка</button>
           <button id="refreshVariantsBtn" class="btn">Варианты</button>
           <button id="clearBuildBtn" class="btn">Очистить</button>
           <button id="openSavesBtn" class="btn">Сохранения</button>
@@ -67,21 +67,21 @@
           </div>
         </div>
         <div class="muted small">
-          Укажи реальные количества артов. Теоретический режим нужен, чтобы увидеть, что стоит искать.
+          Укажи реальные количества артов.
         </div>
         <div class="inventory-list" id="inventoryList"></div>
       </aside>
 
       <section class="panel glass builder-panel">
         <div class="panel-title-row">
-          <h2>Сборка</h2>
+          <h2>Автосборка</h2>
           <div class="toolbar">
             <span class="pill">Слотов: <b id="slotCountLabel">15</b></span>
             <span class="pill">Заполнено: <b id="filledCountLabel">0</b></span>
             <span class="pill">Из инвентаря: <b id="ownedUsageLabel">0</b></span>
           </div>
         </div>
-        <div class="muted small">Зафиксированные слоты не меняются при автоподборе.</div>
+        <div class="muted small">Замок фиксирует слот.</div>
         <div id="containersRoot" class="containers-root"></div>
       </section>
 
@@ -91,14 +91,9 @@
         </div>
         <div id="totalsGrid" class="totals-grid"></div>
 
-        <div class="subpanel">
-          <div class="subpanel-title">Тонкая настройка</div>
-          <div class="muted small">Кнопки +/- меняют приоритет автоподбора, а не редактируют итог вручную.</div>
-          <div id="targetControls" class="target-controls"></div>
-          <div class="target-actions">
-            <button id="rebuildByTargetsBtn" class="btn primary tiny">Пересобрать по целям</button>
-            <button id="resetTargetsBtn" class="btn tiny">Сбросить цели</button>
-          </div>
+        <div class="muted small totals-hint">± рядом с цифрой меняет приоритет.</div>
+        <div class="totals-actions">
+          <button id="resetTargetsBtn" class="btn tiny">Сбросить приоритеты</button>
         </div>
 
         <div class="subpanel">
@@ -126,7 +121,7 @@
         </div>
       </div>
       <div class="muted small">
-        Показываются только безопасные варианты. Если вода или еда уходят в минус, для выживания нужен минимум +1 ХП.
+        Только безопасные варианты.
       </div>
       <div id="variantsRoot" class="variants-root"></div>
     </section>
