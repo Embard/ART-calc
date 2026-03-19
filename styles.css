@@ -714,3 +714,232 @@ h1{font-size:21px !important}
     grid-template-columns:1fr !important;
   }
 }
+
+
+/* v27: keep three columns longer + compress rows harder */
+.layout{
+  grid-template-columns:220px minmax(0,1fr) 250px !important;
+  gap:8px !important;
+}
+.inventory-panel,.sidebar-panel{
+  position:sticky !important;
+  top:8px !important;
+  max-height:calc(100vh - 16px) !important;
+}
+.inventory-panel{
+  padding-right:6px !important;
+}
+.inventory-list{
+  gap:3px !important;
+}
+.inventory-item{
+  grid-template-columns:minmax(0,1fr) 74px !important;
+  gap:5px !important;
+  padding:3px 4px !important;
+}
+.inventory-main{
+  grid-template-columns:34px minmax(0,1fr) !important;
+  gap:5px !important;
+}
+.inventory-thumb{
+  width:34px !important;
+  height:34px !important;
+}
+.inventory-name{
+  font-size:11px !important;
+}
+.inventory-meta{
+  flex-wrap:nowrap !important;
+  overflow:hidden !important;
+  white-space:nowrap !important;
+  gap:2px !important;
+}
+.inventory-meta .stat-chip{
+  flex:0 0 auto !important;
+  font-size:8px !important;
+  padding:1px 3px !important;
+}
+.qty-stepper{
+  min-width:74px !important;
+  padding:2px 3px !important;
+}
+.qty-btn{
+  width:20px !important;
+  height:20px !important;
+  font-size:14px !important;
+}
+.qty-value{
+  font-size:12px !important;
+}
+
+.builder-panel .muted.small{
+  font-size:10px !important;
+}
+.containers-root{
+  grid-template-columns:1fr !important;
+  gap:6px !important;
+}
+.container-card{
+  box-shadow:none !important;
+}
+.container-head{
+  padding:4px 7px !important;
+}
+.container-title{
+  font-size:11px !important;
+}
+.container-slots{
+  gap:4px !important;
+  padding:4px !important;
+}
+.slot-card{
+  gap:3px !important;
+}
+.slot-main{
+  min-height:52px !important;
+  padding:4px 3px !important;
+  gap:3px !important;
+}
+.slot-icon{
+  width:24px !important;
+  height:24px !important;
+  font-size:12px !important;
+}
+.slot-name{
+  font-size:9px !important;
+  line-height:1.0 !important;
+}
+.slot-name > div:first-child{
+  max-width:100% !important;
+}
+.slot-name .small,.slot-name .muted{
+  font-size:7px !important;
+}
+.slot-name .stat-chip{
+  font-size:7px !important;
+  padding:1px 2px !important;
+}
+.slot-name .muted.small{
+  display:flex !important;
+  flex-wrap:nowrap !important;
+  gap:2px !important;
+  overflow:hidden !important;
+  white-space:nowrap !important;
+  justify-content:center !important;
+}
+.slot-actions{
+  gap:2px !important;
+}
+.icon-action{
+  width:20px !important;
+  height:20px !important;
+  font-size:10px !important;
+}
+
+.sidebar-panel{
+  gap:5px !important;
+}
+.totals-grid{
+  gap:3px !important;
+}
+.total-row{
+  padding:3px 4px !important;
+  min-height:24px !important;
+}
+.total-key-wrap{
+  gap:4px !important;
+}
+.total-key{
+  font-size:10px !important;
+}
+.total-bias{
+  min-width:18px !important;
+  font-size:7px !important;
+  padding:1px 3px !important;
+}
+.total-control{
+  grid-template-columns:18px 58px 18px !important;
+  gap:2px !important;
+}
+.total-step{
+  width:18px !important;
+  height:18px !important;
+  font-size:12px !important;
+}
+.total-val{
+  min-width:58px !important;
+  padding:3px 4px !important;
+  font-size:10px !important;
+}
+.totals-hint{
+  font-size:9px !important;
+}
+.subpanel{
+  padding:5px !important;
+}
+.subpanel-title{
+  font-size:10px !important;
+  margin-bottom:3px !important;
+}
+.need-item,.suggest-item{
+  padding:4px !important;
+}
+.need-name,.suggest-name{
+  font-size:10px !important;
+}
+.badge{
+  font-size:8px !important;
+  padding:2px 4px !important;
+}
+.helper-line{
+  font-size:8.5px !important;
+  line-height:1.2 !important;
+}
+.variants-panel{
+  margin-top:6px !important;
+}
+.variant-cards{
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr)) !important;
+  gap:5px !important;
+}
+.variant-card{
+  padding:5px !important;
+  gap:3px !important;
+}
+.variant-name{
+  font-size:11px !important;
+}
+.variant-stats .stat-chip{
+  font-size:8px !important;
+  padding:1px 3px !important;
+}
+.reason-line,.goal-fit-line{
+  padding:2px 4px !important;
+  font-size:8px !important;
+}
+.variant-list{
+  min-height:38px !important;
+  padding:4px !important;
+  font-size:9px !important;
+}
+.variant-actions .btn{
+  padding:5px 7px !important;
+  font-size:9px !important;
+}
+
+/* keep 3 columns until smaller screens */
+@media (max-width:1100px){
+  .layout{
+    grid-template-columns:210px minmax(0,1fr) 230px !important;
+  }
+}
+@media (max-width:980px){
+  .layout{
+    grid-template-columns:1fr !important;
+    grid-template-areas:none !important;
+  }
+  .inventory-panel,.builder-panel,.sidebar-panel{
+    position:static !important;
+    max-height:none !important;
+  }
+}
