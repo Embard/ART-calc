@@ -685,9 +685,9 @@ function renderBuilder() {
   containersRoot.innerHTML = '';
   const slotTemplate = document.getElementById('slotTemplate');
   const used = countSelected();
-  slotCountLabel.textContent = String(state.beltContainers * 3);
-  filledCountLabel.textContent = String(state.slots.filter(Boolean).length);
-  ownedUsageLabel.textContent = String(Object.values(used).reduce((a,b)=>a+b,0));
+  if (slotCountLabel) slotCountLabel.textContent = String(state.beltContainers * 3);
+  if (filledCountLabel) filledCountLabel.textContent = String(state.slots.filter(Boolean).length);
+  if (ownedUsageLabel) ownedUsageLabel.textContent = String(Object.values(used).reduce((a,b)=>a+b,0));
 
   for (let c = 0; c < state.beltContainers; c++) {
     const card = document.createElement('section');
@@ -721,6 +721,7 @@ function renderBuilder() {
 
       lockBtn.textContent = locked ? '🔒' : '🔓';
       lockBtn.classList.toggle('active', locked);
+      lockBtn.setAttribute('aria-pressed', locked ? 'true' : 'false');
       lockBtn.title = locked ? 'Снять фиксацию' : 'Зафиксировать';
       delBtn.title = 'Убрать';
 
