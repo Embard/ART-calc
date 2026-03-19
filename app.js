@@ -70,7 +70,10 @@ function resetTargets() {
   applyBestBuild(true);
 }
 function targetScale(v) {
-  return Math.max(0.1, 1 + Number(v || 0) * 0.8);
+  const n = Number(v || 0);
+  if (n > 0) return 1 + n * 1.6;
+  if (n < 0) return Math.max(0.2, 1 + n * 0.45);
+  return 1;
 }
 function activeTargetEntries() {
   return Object.entries(state.targets).filter(([, value]) => Number(value) !== 0);
@@ -559,9 +562,9 @@ function renderNeeds(needs) {
   ownedSuggestions.innerHTML = '';
   missingSuggestions.innerHTML = '';
   if (!needs.length) {
-    needsList.innerHTML = `<div class="empty-state">Критичных минусов нет. Сборка безопасна по здоровью / крови / шоку / радиации / порезам.</div>`;
-    ownedSuggestions.innerHTML = `<div class="empty-state">Сейчас ничего дополнительно закрывать не нужно.</div>`;
-    missingSuggestions.innerHTML = `<div class="empty-state">${state.planSource === 'all' ? 'Сейчас включён режим «Все арты»: сайт может предлагать теоретические сборки и цели для поиска.' : 'Для безопасной сборки сейчас ничего искать не нужно.'}</div>`;
+    needsList.innerHTML = `<div class="empty-state">Критичных минусов нет.</div>`;
+    ownedSuggestions.innerHTML = `<div class="empty-state">Ничего дополнительно закрывать не нужно.</div>`;
+    missingSuggestions.innerHTML = `<div class="empty-state">${state.planSource === 'all' ? 'Режим «Все арты»: можно смотреть теоретические цели для поиска.' : 'По этой сборке ничего добирать не нужно.'}</div>`;
     return;
   }
 
@@ -697,7 +700,6 @@ function renderBuilder() {
       const icon = slot.querySelector('.slot-icon');
       const nameEl = slot.querySelector('.slot-name');
       const lockBtn = slot.querySelector('.lock-btn');
-      const dupBtn = slot.querySelector('.duplicate-btn');
       const delBtn = slot.querySelector('.remove-btn');
       const artName = state.slots[slotIndex];
       const locked = Boolean(state.locked[slotIndex]);
@@ -718,7 +720,6 @@ function renderBuilder() {
       lockBtn.textContent = locked ? '🔒' : '🔓';
       lockBtn.classList.toggle('active', locked);
       lockBtn.title = locked ? 'Снять фиксацию' : 'Зафиксировать';
-      dupBtn.title = 'Дублировать';
       delBtn.title = 'Убрать';
 
       btn.addEventListener('click', () => openPicker(slotIndex));
@@ -730,13 +731,6 @@ function renderBuilder() {
         if (!state.slots[slotIndex]) return;
         state.locked[slotIndex] = !state.locked[slotIndex];
         saveState(); renderAll();
-      });
-      dupBtn.addEventListener('click', () => {
-        if (!artName) return;
-        const freeIndex = state.slots.findIndex((x, idx) => idx !== slotIndex && !x);
-        if (freeIndex === -1) return alert('Свободных слотов нет');
-        if (state.planSource === 'inventory' && !slotCanUseArt(artName, freeIndex)) return alert('Этого арта в инвентаре больше нет');
-        state.slots[freeIndex] = artName; state.locked[freeIndex] = false; saveState(); renderAll();
       });
 
       slotsWrap.appendChild(slot);
@@ -890,20 +884,20 @@ function penalties(totals, fishCount, riskBleedCount, phase='base') {
 }
 
 function targetBonusScore(totals, phase='base') {
-  const w = (base, key) => base * targetScale(state.targets[key] || 0);
   const bloodTarget = desiredBloodTarget(totals);
   const cappedBlood = Math.min(Math.max(0, totals.blood), bloodTarget);
+  const mult = (base, key) => base * targetScale(state.targets[key] || 0);
   return (
-    Math.max(0, totals.health) * w(phase === 'final' ? 300 : 36, 'health') +
-    cappedBlood * w(phase === 'final' ? 36 : 4.4, 'blood') +
-    Math.max(0, totals.shock) * w(phase === 'final' ? 42 : 5.2, 'shock') +
-    totals.water * w(phase === 'final' ? 14 : 1.8, 'water') +
-    totals.food * w(phase === 'final' ? 14 : 1.8, 'food') +
-    Math.max(0, totals.radOut) * w(phase === 'final' ? 18 : 2.1, 'radOut') +
-    (-Math.max(0, totals.radIn)) * w(phase === 'final' ? 18 : 2.1, 'radIn') +
-    Math.max(0, totals.radBalance) * w(phase === 'final' ? 56 : 6.0, 'radBalance') +
-    (-Math.max(0, totals.bleedChance)) * w(phase === 'final' ? 26 : 3.0, 'bleedChance') +
-    Math.max(0, totals.bleedHeal) * w(phase === 'final' ? 22 : 2.6, 'bleedHeal')
+    Math.max(0, totals.health) * mult(phase === 'final' ? 680 : 82, 'health') +
+    cappedBlood * mult(phase === 'final' ? 82 : 9.5, 'blood') +
+    Math.max(0, totals.shock) * mult(phase === 'final' ? 95 : 11, 'shock') +
+    totals.water * mult(phase === 'final' ? 34 : 4.2, 'water') +
+    totals.food * mult(phase === 'final' ? 34 : 4.2, 'food') +
+    Math.max(0, totals.radOut) * mult(phase === 'final' ? 40 : 4.8, 'radOut') +
+    (-Math.max(0, totals.radIn)) * mult(phase === 'final' ? 40 : 4.8, 'radIn') +
+    Math.max(0, totals.radBalance) * mult(phase === 'final' ? 140 : 16, 'radBalance') +
+    (-Math.max(0, totals.bleedChance)) * mult(phase === 'final' ? 62 : 7.2, 'bleedChance') +
+    Math.max(0, totals.bleedHeal) * mult(phase === 'final' ? 56 : 6.0, 'bleedHeal')
   );
 }
 function scoreByObjective(totals, fishCount, riskBleedCount, objective, slotUsage=0, phase='base') {
@@ -1221,7 +1215,7 @@ function renderVariants() {
       state.locked = state.locked.slice(0, slotCount);
       while (state.locked.length < slotCount) state.locked.push(false);
       saveState();
-      renderAll(false);
+      renderAll(true);
     });
     cardsRoot.appendChild(card);
   });
@@ -1234,13 +1228,13 @@ function applyBestBuild(silent = false) {
   const pool = buildCandidatePool(slotCount).filter(c => isSafeTotals(c.totals));
   if (!pool.length) {
     if (!silent) alert('Безопасная сборка с учётом зафиксированных артов не найдена. Сначала добери арты, которые закроют здоровье / кровь / шок / радиацию / порезы.');
-    renderAll(false);
+    renderAll(true);
     return false;
   }
   const best = pickTopBalancedVariants(pool, 1)[0] || pool.sort((a,b) => finalObjectiveScore(b.totals, b.fishCount, b.riskBleedCount, 'balanced', b.slotUsage) - finalObjectiveScore(a.totals, a.fishCount, a.riskBleedCount, 'balanced', a.slotUsage))[0];
   if (!best) {
     if (!silent) alert('Безопасная сборка не найдена.');
-    renderAll(false);
+    renderAll(true);
     return false;
   }
   state.slots = materializeSlotsFromCounts(best.counts).slice(0, slotCount);
@@ -1248,7 +1242,7 @@ function applyBestBuild(silent = false) {
   state.locked = state.locked.slice(0, slotCount);
   while (state.locked.length < slotCount) state.locked.push(false);
   saveState();
-  renderAll(false);
+  renderAll(true);
   return true;
 }
 
@@ -1309,7 +1303,10 @@ async function init() {
 }
 
 document.getElementById('applyBestBtn').addEventListener('click', applyBestBuild);
-document.getElementById('refreshVariantsBtn').addEventListener('click', renderVariants);
+document.getElementById('refreshVariantsBtn').addEventListener('click', () => {
+  renderVariants();
+  document.querySelector('.variants-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 document.getElementById('clearBuildBtn').addEventListener('click', clearBuild);
 document.getElementById('openSavesBtn').addEventListener('click', openSavesModal);
 document.getElementById('saveBuildPresetBtn').addEventListener('click', saveBuildPreset);
