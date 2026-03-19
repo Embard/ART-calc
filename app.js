@@ -62,12 +62,12 @@ function biasText(v) {
 function adjustTarget(key, delta) {
   state.targets[key] = Math.max(-2, Math.min(2, Number(state.targets[key] || 0) + delta));
   saveState();
-  renderTotals();
+  applyBestBuild(true);
 }
 function resetTargets() {
   Object.keys(state.targets).forEach(key => state.targets[key] = 0);
   saveState();
-  renderTotals();
+  applyBestBuild(true);
 }
 function targetScale(v) {
   return Math.max(0.25, 1 + Number(v || 0) * 0.35);
@@ -77,7 +77,7 @@ function activeTargetEntries() {
 }
 function describeActiveTargetsShort() {
   const active = activeTargetEntries();
-  if (!active.length) return 'Нейтральные цели';
+  if (!active.length) return '';
   return active.map(([key, value]) => `${targetLabels[key]} ${value > 0 ? '↑' : '↓'}`).join(' • ');
 }
 function goalCheckForVariant(key, cand) {
@@ -115,7 +115,7 @@ function goalCheckForVariant(key, cand) {
 }
 function describeGoalFit(cand) {
   const active = activeTargetEntries();
-  if (!active.length) return 'Цели: нейтральные';
+  if (!active.length) return '';
   const met = [];
   const missed = [];
   active.forEach(([key, value]) => {
@@ -134,7 +134,6 @@ const planSourceSelect = document.getElementById('planSourceSelect');
 const inventoryList = document.getElementById('inventoryList');
 const containersRoot = document.getElementById('containersRoot');
 const totalsGrid = document.getElementById('totalsGrid');
-const targetControls = document.getElementById('targetControls');
 const needsList = document.getElementById('needsList');
 const ownedSuggestions = document.getElementById('ownedSuggestions');
 const missingSuggestions = document.getElementById('missingSuggestions');
@@ -156,9 +155,8 @@ const buildPresetNameInput = document.getElementById('buildPresetName');
 const inventoryPresetNameInput = document.getElementById('inventoryPresetName');
 const buildPresetsList = document.getElementById('buildPresetsList');
 const inventoryPresetsList = document.getElementById('inventoryPresetsList');
-const rebuildByTargetsBtn = document.getElementById('rebuildByTargetsBtn');
 const resetTargetsBtn = document.getElementById('resetTargetsBtn');
-const statusClock = document.getElementById('statusClock');
+
 
 function normalizeArt(a) {
   return {
@@ -504,47 +502,55 @@ function estimateMissing(need) {
 }
 
 
-function renderTargetControls() {
-  if (!targetControls) return;
-  targetControls.innerHTML = '';
-  totalsMeta.forEach(([key, label]) => {
-    const row = document.createElement('div');
-    row.className = 'target-row';
-    row.innerHTML = `
-      <div class="target-name">${label}</div>
-      <div class="target-stepper">
-        <button class="target-btn" type="button" data-key="${key}" data-delta="-1">−</button>
-        <div class="target-value ${biasClass(state.targets[key] || 0)}">${biasText(state.targets[key] || 0)}</div>
-        <button class="target-btn" type="button" data-key="${key}" data-delta="1">+</button>
-      </div>
-    `;
-    row.querySelectorAll('.target-btn').forEach(btn => {
-      btn.addEventListener('click', () => adjustTarget(btn.dataset.key, Number(btn.dataset.delta)));
-    });
-    targetControls.appendChild(row);
-  });
-}
-
 function renderTotals() {
   const totals = getTotals();
   totalsGrid.innerHTML = '';
   totalsMeta.forEach(([key, label]) => {
     const val = totals[key];
-    const k = document.createElement('div');
-    k.className = 'total-key';
-    k.textContent = label;
-    const v = document.createElement('div');
-    v.className = 'total-val';
     let tone = 'neg';
     if (key === 'bleedChance') tone = val <= 0 ? 'pos' : 'neg';
     else if (key === 'blood') tone = val >= 100 ? 'pos' : (val >= 0 ? 'mid' : 'neg');
     else tone = val >= 0 ? 'pos' : 'neg';
-    v.classList.add(tone);
+
+    const row = document.createElement('div');
+    row.className = 'total-row';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'total-key-wrap';
+
+    const k = document.createElement('div');
+    k.className = 'total-key';
+    k.textContent = label;
+
+    const bias = document.createElement('div');
+    const targetVal = Number(state.targets[key] || 0);
+    bias.className = `total-bias ${biasClass(targetVal)}`;
+    bias.textContent = targetVal === 0 ? '0' : (targetVal > 0 ? `↑${targetVal}` : `↓${Math.abs(targetVal)}`);
+
+    const control = document.createElement('div');
+    control.className = 'total-control';
+
+    const minus = document.createElement('button');
+    minus.type = 'button';
+    minus.className = 'total-step';
+    minus.textContent = '−';
+    minus.addEventListener('click', () => adjustTarget(key, -1));
+
+    const v = document.createElement('div');
+    v.className = `total-val ${tone}`;
     v.textContent = `${val > 0 ? '+' : ''}${val}`;
-    totalsGrid.appendChild(k);
-    totalsGrid.appendChild(v);
+
+    const plus = document.createElement('button');
+    plus.type = 'button';
+    plus.className = 'total-step';
+    plus.textContent = '+';
+    plus.addEventListener('click', () => adjustTarget(key, 1));
+
+    wrap.append(k, bias);
+    control.append(minus, v, plus);
+    row.append(wrap, control);
+    totalsGrid.appendChild(row);
   });
-  renderTargetControls();
   renderNeeds(getNeeds(totals));
 }
 
@@ -1177,7 +1183,8 @@ function renderVariants() {
 
   const wrap = document.createElement('div');
   wrap.className = 'variant-group';
-  wrap.innerHTML = `<div class="variant-group-title"><div><div class="variant-name">Альтернативные баланс-сборки</div><div class="helper-line" style="margin-top:4px">${describeActiveTargetsShort()}</div></div><div class="badge">${state.planSource === 'all' ? 'Все арты' : 'Из инвентаря'}</div></div><div class="variant-cards"></div>`;
+  const activeTargetsText = describeActiveTargetsShort();
+  wrap.innerHTML = `<div class="variant-group-title"><div><div class="variant-name">Альтернативные баланс-сборки</div>${activeTargetsText ? `<div class="helper-line" style="margin-top:4px">${activeTargetsText}</div>` : ''}</div><div class="badge">${state.planSource === 'all' ? 'Все арты' : 'Из инвентаря'}</div></div><div class="variant-cards"></div>`;
   const cardsRoot = wrap.querySelector('.variant-cards');
 
   variants.forEach((cand, idx) => {
@@ -1204,7 +1211,7 @@ function renderVariants() {
       </div>
       <div class="helper-line">Слотов занято: ${cand.slotUsage}/${slotCount}${emptySlots > 0 ? `, свободно ${emptySlots}` : ''}${lockedUsed ? `, зафиксировано ${lockedUsed}` : ''}</div>
       <div class="reason-line">${describeVariantReason(cand)}</div>
-      <div class="goal-fit-line">${describeGoalFit(cand)}</div>
+      ${describeGoalFit(cand) ? `<div class="goal-fit-line">${describeGoalFit(cand)}</div>` : ''}
       <div class="variant-list">${lines}</div>
       <div class="variant-actions"><button class="btn tiny primary">Применить</button></div>
     `;
@@ -1222,21 +1229,27 @@ function renderVariants() {
   variantsRoot.appendChild(wrap);
 }
 
-function applyBestBuild() {
+function applyBestBuild(silent = false) {
   const slotCount = state.beltContainers * 3;
   const pool = buildCandidatePool(slotCount).filter(c => isSafeTotals(c.totals));
   if (!pool.length) {
-    alert('Безопасная сборка с учётом зафиксированных артов не найдена. Сначала добери арты, которые закроют здоровье / кровь / шок / радиацию / порезы.');
-    return;
+    if (!silent) alert('Безопасная сборка с учётом зафиксированных артов не найдена. Сначала добери арты, которые закроют здоровье / кровь / шок / радиацию / порезы.');
+    renderAll(false);
+    return false;
   }
   const best = pickTopBalancedVariants(pool, 1)[0] || pool.sort((a,b) => finalObjectiveScore(b.totals, b.fishCount, b.riskBleedCount, 'balanced', b.slotUsage) - finalObjectiveScore(a.totals, a.fishCount, a.riskBleedCount, 'balanced', a.slotUsage))[0];
-  if (!best) return alert('Безопасная сборка не найдена.');
+  if (!best) {
+    if (!silent) alert('Безопасная сборка не найдена.');
+    renderAll(false);
+    return false;
+  }
   state.slots = materializeSlotsFromCounts(best.counts).slice(0, slotCount);
   while (state.slots.length < slotCount) state.slots.push(null);
   state.locked = state.locked.slice(0, slotCount);
   while (state.locked.length < slotCount) state.locked.push(false);
   saveState();
   renderAll(false);
+  return true;
 }
 
 function clearBuild() {
@@ -1247,13 +1260,6 @@ function clearBuild() {
 }
 
 
-function updateStatusClock() {
-  if (!statusClock) return;
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  statusClock.textContent = `${hh}:${mm}`;
-}
 
 function syncSegmentedControls() {
   if (beltButtons) {
@@ -1281,7 +1287,7 @@ function syncSegmentedControls() {
 function renderAll(recomputeVariants = true) {
   ensureSlotsLength();
   syncSegmentedControls();
-  updateStatusClock();
+
   renderInventory();
   renderBuilder();
   renderTotals();
@@ -1308,8 +1314,7 @@ document.getElementById('clearBuildBtn').addEventListener('click', clearBuild);
 document.getElementById('openSavesBtn').addEventListener('click', openSavesModal);
 document.getElementById('saveBuildPresetBtn').addEventListener('click', saveBuildPreset);
 document.getElementById('saveInventoryPresetBtn').addEventListener('click', saveInventoryPreset);
-if (rebuildByTargetsBtn) rebuildByTargetsBtn.addEventListener('click', applyBestBuild);
-if (resetTargetsBtn) resetTargetsBtn.addEventListener('click', () => { resetTargets(); renderVariants(); });
+if (resetTargetsBtn) resetTargetsBtn.addEventListener('click', resetTargets);
 beltSelect.addEventListener('change', () => { state.beltContainers = Number(beltSelect.value); ensureSlotsLength(); saveState(); renderAll(); });
 planSourceSelect.addEventListener('change', () => { state.planSource = planSourceSelect.value === 'all' ? 'all' : 'inventory'; saveState(); renderAll(); });
 
@@ -1347,5 +1352,3 @@ if (savesModal) {
 window.addEventListener('beforeunload', saveState);
 
 init();
-updateStatusClock();
-setInterval(updateStatusClock, 30000);
