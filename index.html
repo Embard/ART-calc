@@ -60,9 +60,9 @@
 
     <main class="layout">
       <aside class="panel glass inventory-panel">
-        <div class="panel-title-row">
+        <div class="panel-title-row panel-title-stack">
           <h2>Инвентарь</h2>
-          <div class="toolbar">
+          <div class="toolbar toolbar-search">
             <input id="inventorySearch" type="search" placeholder="Поиск..." />
           </div>
         </div>
@@ -73,7 +73,7 @@
       </aside>
 
       <section class="panel glass builder-panel">
-        <div class="panel-title-row">
+        <div class="panel-title-row panel-title-simple">
           <h2>Сборка</h2>
         </div>
         <div class="muted small">Замок фиксирует слот и подсвечивает ячейку.</div>
@@ -81,7 +81,7 @@
       </section>
 
       <aside class="panel glass sidebar-panel">
-        <div class="panel-title-row">
+        <div class="panel-title-row panel-title-simple">
           <h2>Итог</h2>
         </div>
         <div id="totalsGrid" class="totals-grid"></div>
@@ -109,20 +109,17 @@
           </div>
         </div>
       </aside>
-    </main>
 
-    <section class="panel glass variants-panel">
-      <div class="panel-title-row">
-        <h2>Варианты сборок</h2>
-        <div class="toolbar">
-          <span class="pill">Топ-5 альтернативных баланс-сборок</span>
+      <aside class="panel glass variants-panel side-variants-panel">
+        <div class="panel-title-row panel-title-simple">
+          <h2>Альт. сборки</h2>
         </div>
-      </div>
-      <div class="muted small">
-        Только безопасные варианты. Кнопка «Варианты» пересчитывает и прокручивает к списку.
-      </div>
-      <div id="variantsRoot" class="variants-root"></div>
-    </section>
+        <div class="muted small">
+          Быстрые безопасные пресеты. Кнопка «Варианты» пересчитывает список.
+        </div>
+        <div id="variantsRoot" class="variants-root"></div>
+      </aside>
+    </main>
   </div>
 
   <div id="pickerModal" class="modal hidden" aria-hidden="true">
