@@ -721,7 +721,6 @@ function renderBuilder() {
 
       lockBtn.textContent = locked ? '🔒' : '🔓';
       lockBtn.classList.toggle('active', locked);
-      lockBtn.setAttribute('aria-pressed', locked ? 'true' : 'false');
       lockBtn.title = locked ? 'Снять фиксацию' : 'Зафиксировать';
       delBtn.title = 'Убрать';
 
@@ -1206,7 +1205,7 @@ function renderVariants() {
         <span class="stat-chip ${cand.totals.water >= 0 ? 'pos' : 'neg'}">Вода ${cand.totals.water > 0 ? '+' : ''}${cand.totals.water}</span>
         <span class="stat-chip ${cand.totals.food >= 0 ? 'pos' : 'neg'}">Еда ${cand.totals.food > 0 ? '+' : ''}${cand.totals.food}</span>
       </div>
-      <div class="helper-line">Слотов занято: ${cand.slotUsage}/${slotCount}${emptySlots > 0 ? `, свободно ${emptySlots}` : ''}${lockedUsed ? `, зафиксировано ${lockedUsed}` : ''}</div>
+      <div class="helper-line">Занято ${cand.slotUsage}/${slotCount}${emptySlots > 0 ? ` • свободно ${emptySlots}` : ''}${lockedUsed ? ` • фиксировано ${lockedUsed}` : ''}</div>
       <div class="reason-line">${describeVariantReason(cand)}</div>
       ${describeGoalFit(cand) ? `<div class="goal-fit-line">${describeGoalFit(cand)}</div>` : ''}
       <div class="variant-list">${lines}</div>
@@ -1308,7 +1307,7 @@ async function init() {
 document.getElementById('applyBestBtn').addEventListener('click', applyBestBuild);
 document.getElementById('refreshVariantsBtn').addEventListener('click', () => {
   renderAll(true);
-  document.querySelector('.variants-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.querySelector('.variants-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
 });
 document.getElementById('clearBuildBtn').addEventListener('click', clearBuild);
 document.getElementById('openSavesBtn').addEventListener('click', openSavesModal);
