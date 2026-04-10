@@ -1,16 +1,16 @@
 
 :root{
   --bg:#0b0d0e;
-  --panel:rgba(10,12,13,.88);
-  --panel2:rgba(13,16,17,.94);
-  --line:rgba(185,194,154,.14);
-  --line-soft:rgba(185,194,154,.08);
+  --panel:rgba(8,12,10,.9);
+  --panel2:rgba(10,16,13,.95);
+  --line:rgba(164,205,141,.2);
+  --line-soft:rgba(164,205,141,.12);
   --text:#ece8dd;
-  --muted:#b8b3a2;
-  --olive:#8d986b;
-  --amber:#c79f58;
-  --ok:#91c875;
-  --warn:#e39461;
+  --muted:#c0c8b4;
+  --olive:#93b06d;
+  --amber:#d3ad65;
+  --ok:#8fda73;
+  --warn:#f0a066;
   --danger:#c96f5e;
   --shadow:rgba(0,0,0,.58);
 }
@@ -31,7 +31,7 @@ body{min-height:100vh;overflow-x:hidden}
 .app{position:relative;z-index:1;max-width:1900px;margin:0 auto;padding:12px}
 .glass{
   background:
-    linear-gradient(to bottom, rgba(255,255,255,.015), rgba(255,255,255,0)),
+    linear-gradient(to bottom, rgba(187,255,154,.03), rgba(255,255,255,0)),
     var(--panel);
   border:1px solid var(--line-soft);
   box-shadow:0 10px 24px var(--shadow);
@@ -125,6 +125,15 @@ h1{
     linear-gradient(to bottom, rgba(199,159,88,.14), rgba(0,0,0,0)),
     linear-gradient(to bottom,#556246,#3f4836);
 }
+.btn.secondary{
+  background:
+    linear-gradient(to bottom, rgba(143,218,115,.16), rgba(0,0,0,0)),
+    rgba(0,0,0,.42);
+}
+.btn.ghost{
+  background:rgba(0,0,0,.3);
+  border-color:rgba(240,160,102,.35);
+}
 .btn.tiny{padding:5px 7px}
 input[type="search"]{
   width:100%;
@@ -212,7 +221,7 @@ input[type="search"]:focus{border-color:#7f8960}
 }
 .stat-chip{
   display:inline-flex;align-items:center;
-  font-size:7px;line-height:1.1;
+  font-size:9px;line-height:1.2;
   padding:1px 3px;
   background:rgba(255,255,255,.04);
   border:1px solid rgba(255,255,255,.03);
@@ -223,16 +232,16 @@ input[type="search"]:focus{border-color:#7f8960}
 .stat-chip.mid{color:var(--amber)}
 .qty-stepper{
   display:grid;
-  grid-template-columns:18px 1fr 18px;
+  grid-template-columns:24px 1fr 24px;
   gap:3px;align-items:center;
-  min-width:72px;padding:2px 3px;
+  min-width:84px;padding:3px 4px;
   background:rgba(0,0,0,.42);
   border:1px solid var(--line);
 }
 .qty-btn{
-  width:18px;height:18px;border:1px solid var(--line);
+  width:24px;height:24px;border:1px solid var(--line);
   background:rgba(255,255,255,.04);color:#fff;
-  font-size:12px;line-height:1;cursor:pointer;padding:0
+  font-size:14px;line-height:1;cursor:pointer;padding:0
 }
 .qty-btn:hover{background:rgba(255,255,255,.08)}
 .qty-value{text-align:center;font-size:11px;font-weight:800}
@@ -309,6 +318,13 @@ input[type="search"]:focus{border-color:#7f8960}
   border-color:rgba(199,159,88,.72);
   box-shadow:0 0 0 1px rgba(199,159,88,.16), inset 0 0 0 1px rgba(255,220,142,.06);
 }
+.slot-card.dragging .slot-main{
+  opacity:.55;
+}
+.slot-card.drag-over .slot-main{
+  border-color:rgba(145,200,117,.88);
+  box-shadow:0 0 0 2px rgba(145,200,117,.25), inset 0 0 0 1px rgba(145,200,117,.18);
+}
 .lock-btn.active{
   background:rgba(93,73,28,.58);
   border-color:rgba(199,159,88,.72);
@@ -339,9 +355,9 @@ input[type="search"]:focus{border-color:#7f8960}
   border:1px solid var(--line-soft);
 }
 .total-key-wrap{display:flex;align-items:center;gap:4px;min-width:0}
-.total-key{font-size:10px}
+.total-key{font-size:11px}
 .total-bias{
-  min-width:16px;padding:0 2px;font-size:7px;
+  min-width:18px;padding:0 3px;font-size:9px;
   border:1px solid rgba(255,255,255,.06);
   background:rgba(255,255,255,.04);
 }
@@ -350,25 +366,29 @@ input[type="search"]:focus{border-color:#7f8960}
 .total-bias.neu{color:#d6d1c2}
 .total-control{
   display:grid;
-  grid-template-columns:18px 54px 18px;
+  grid-template-columns:22px 58px 22px;
   gap:2px;align-items:center
 }
 .total-step{
-  width:18px;height:18px;border:1px solid var(--line);
+  width:22px;height:22px;border:1px solid var(--line);
   background:rgba(255,255,255,.04);color:#fff;
-  font-size:11px;cursor:pointer;padding:0
+  font-size:13px;cursor:pointer;padding:0
 }
 .total-step:hover{background:rgba(255,255,255,.08)}
 .total-val{
-  min-width:54px;padding:2px 4px;text-align:center;font-size:10px;font-weight:800;
+  min-width:58px;padding:2px 4px;text-align:center;font-size:11px;font-weight:800;
   border:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.24)
 }
 .total-val.pos{color:var(--ok)}
 .total-val.mid{color:var(--amber)}
 .total-val.neg{color:var(--warn)}
-.totals-hint{font-size:8.5px}
+.totals-hint{font-size:10px}
 .totals-actions{display:flex;justify-content:flex-end}
 .subpanel{padding:8px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05)}
+.decision-explain{
+  border-color:rgba(143,218,115,.28);
+  background:linear-gradient(to right, rgba(143,218,115,.08), rgba(0,0,0,0));
+}
 .subpanel-title{font-size:10px;font-weight:800;text-transform:uppercase;margin-bottom:3px}
 .summary-mini{display:grid;gap:6px}
 .summary-section{
@@ -383,13 +403,13 @@ input[type="search"]:focus{border-color:#7f8960}
 .need-item,.suggest-item{padding:0;background:none;border:none}
 .empty-state{
   padding:2px 0;background:none;border:none;
-  font-size:8.8px;line-height:1.25;color:#d9d4c6
+  font-size:10px;line-height:1.35;color:#d9d4c6
 }
 .helper-line{
-  font-size:8px;line-height:1.2;margin-top:2px;color:#d4cfbf
+  font-size:10px;line-height:1.3;margin-top:2px;color:#d4cfbf
 }
 .badge{
-  font-size:8px;padding:2px 4px;background:rgba(255,255,255,.05);
+  font-size:10px;padding:2px 4px;background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.06)
 }
 .badge.ok{color:var(--ok)}
@@ -416,7 +436,7 @@ input[type="search"]:focus{border-color:#7f8960}
 .variant-stats{display:flex;flex-wrap:wrap;gap:4px}
 .variant-stats .stat-chip{font-size:8px;padding:1px 3px}
 .reason-line,.goal-fit-line{
-  font-size:8px;line-height:1.25;padding:4px 5px;
+  font-size:10px;line-height:1.35;padding:4px 5px;
   background:rgba(255,255,255,.03);
   border-left:2px solid rgba(141,152,107,.30)
 }
@@ -426,7 +446,7 @@ input[type="search"]:focus{border-color:#7f8960}
 }
 .variant-actions{display:flex;justify-content:stretch}
 .variant-actions .btn{width:100%}
-.side-variants-panel .helper-line{font-size:8.5px}
+.side-variants-panel .helper-line{font-size:10px}
 
 .modal{position:fixed;inset:0;z-index:40}
 .modal.hidden{display:none}

@@ -7,6 +7,7 @@ const state = {
   planSource: 'inventory',
   slots: [],
   locked: [],
+  dragSlotIndex: null,
   pickerSlotIndex: null,
   variants: null,
   targets: {
@@ -90,6 +91,7 @@ function goalCheckForVariant(key, cand) {
   const strength = Math.abs(Number(state.targets[key] || 0));
   if (!strength) return null;
   const up = Number(state.targets[key]) > 0;
+  if (!up) return null;
 
   switch (key) {
     case 'health':
@@ -119,13 +121,13 @@ function goalCheckForVariant(key, cand) {
   }
 }
 function describeGoalFit(cand) {
-  const active = activeTargetEntries();
+  const active = activeTargetEntries().filter(([, value]) => Number(value) > 0);
   if (!active.length) return '';
   const met = [];
   const missed = [];
   active.forEach(([key, value]) => {
     const okay = goalCheckForVariant(key, cand);
-    const short = `${targetLabels[key]} ${value > 0 ? '↑' : '↓'}`;
+    const short = `${targetLabels[key]} ↑`;
     if (okay) met.push(short);
     else missed.push(short);
   });
@@ -142,6 +144,7 @@ const totalsGrid = document.getElementById('totalsGrid');
 const needsList = document.getElementById('needsList');
 const ownedSuggestions = document.getElementById('ownedSuggestions');
 const missingSuggestions = document.getElementById('missingSuggestions');
+const decisionExplain = document.getElementById('decisionExplain');
 const inventorySearch = document.getElementById('inventorySearch');
 const pickerModal = document.getElementById('pickerModal');
 const pickerTitle = document.getElementById('pickerTitle');
@@ -161,6 +164,7 @@ const inventoryPresetNameInput = document.getElementById('inventoryPresetName');
 const buildPresetsList = document.getElementById('buildPresetsList');
 const inventoryPresetsList = document.getElementById('inventoryPresetsList');
 const resetTargetsBtn = document.getElementById('resetTargetsBtn');
+let variantsDebounceTimer = null;
 
 
 function normalizeArt(a) {
@@ -556,7 +560,30 @@ function renderTotals() {
     row.append(wrap, control);
     totalsGrid.appendChild(row);
   });
+  renderDecisionExplain(totals);
   renderNeeds(getNeeds(totals));
+}
+
+function renderDecisionExplain(totals) {
+  if (!decisionExplain) return;
+  const strengths = [];
+  if (totals.health > 0) strengths.push(`Здоровье +${totals.health}`);
+  if (totals.blood > 0) strengths.push(`Кровь +${totals.blood}`);
+  if (totals.shock > 0) strengths.push(`Шок +${totals.shock}`);
+  if (totals.radBalance > 0) strengths.push(`Рад-баланс +${totals.radBalance}`);
+  if (totals.bleedChance <= 0) strengths.push('Без роста шанса пореза');
+  if (canHoldEmission(totals)) strengths.push('Держит выброс');
+
+  const risks = [];
+  if (totals.water < 0) risks.push(`Вода ${totals.water}`);
+  if (totals.food < 0) risks.push(`Еда ${totals.food}`);
+  if (totals.radIn > 0) risks.push(`Радиация +${totals.radIn}`);
+
+  decisionExplain.innerHTML = `
+    <div class="subpanel-title">Почему этот билд</div>
+    <div class="helper-line">Плюсы: ${strengths.length ? strengths.slice(0, 4).join(' • ') : 'средние значения без ярко выраженных плюсов'}</div>
+    <div class="helper-line">Риски: ${risks.length ? risks.join(' • ') : 'критичных рисков не обнаружено'}</div>
+  `;
 }
 
 function renderNeeds(needs) {
@@ -668,8 +695,8 @@ function renderInventory() {
     const currentQty = Number(state.inventory[art.name] || 0);
     const stepper = buildStepper(
       currentQty,
-      () => { state.inventory[art.name] = Math.max(0, Number(state.inventory[art.name] || 0) - 1); saveState(); renderAll(); },
-      () => { state.inventory[art.name] = Math.max(0, Number(state.inventory[art.name] || 0) + 1); saveState(); renderAll(); }
+      () => { state.inventory[art.name] = Math.max(0, Number(state.inventory[art.name] || 0) - 1); saveState(); renderAll(false); scheduleVariantsRecompute(); },
+      () => { state.inventory[art.name] = Math.max(0, Number(state.inventory[art.name] || 0) + 1); saveState(); renderAll(false); scheduleVariantsRecompute(); }
     );
     item.append(info, stepper);
     inventoryList.appendChild(item);
@@ -718,11 +745,55 @@ function renderBuilder() {
       }
 
       if (artName && (used[artName] || 0) > Number(state.inventory[artName] || 0) && state.planSource === 'inventory') btn.classList.add('invalid');
+      btn.draggable = Boolean(artName && !locked);
 
       lockBtn.textContent = locked ? '🔒' : '🔓';
       lockBtn.classList.toggle('active', locked);
       lockBtn.title = locked ? 'Снять фиксацию' : 'Зафиксировать';
       delBtn.title = 'Убрать';
+
+      btn.addEventListener('dragstart', (e) => {
+        if (!state.slots[slotIndex] || state.locked[slotIndex]) {
+          e.preventDefault();
+          return;
+        }
+        state.dragSlotIndex = slotIndex;
+        slot.classList.add('dragging');
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', String(slotIndex));
+        }
+      });
+      btn.addEventListener('dragend', () => {
+        state.dragSlotIndex = null;
+        containersRoot.querySelectorAll('.slot-card.drag-over,.slot-card.dragging').forEach(el => {
+          el.classList.remove('drag-over', 'dragging');
+        });
+      });
+      btn.addEventListener('dragover', (e) => {
+        const from = state.dragSlotIndex;
+        if (from === null || from === slotIndex || state.locked[slotIndex]) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        slot.classList.add('drag-over');
+      });
+      btn.addEventListener('dragleave', () => {
+        slot.classList.remove('drag-over');
+      });
+      btn.addEventListener('drop', (e) => {
+        const from = state.dragSlotIndex;
+        slot.classList.remove('drag-over');
+        if (from === null || from === slotIndex || state.locked[slotIndex]) return;
+        e.preventDefault();
+        const moved = state.slots[from];
+        if (!moved) return;
+        const target = state.slots[slotIndex] || null;
+        state.slots[slotIndex] = moved;
+        state.slots[from] = target;
+        state.dragSlotIndex = null;
+        saveState();
+        renderAll();
+      });
 
       btn.addEventListener('click', () => openPicker(slotIndex));
       delBtn.addEventListener('click', () => {
@@ -788,7 +859,6 @@ function renderPicker() {
     card.addEventListener('click', () => {
       if (ownedOnly && !slotCanUseArt(art.name, slotIndex)) return;
       state.slots[slotIndex] = art.name;
-      if (!state.slots[slotIndex]) state.locked[slotIndex] = false;
       saveState(); renderAll(); closePicker();
     });
     pickerList.appendChild(card);
@@ -1260,7 +1330,9 @@ function clearBuild() {
 function syncSegmentedControls() {
   if (beltButtons) {
     [...beltButtons.querySelectorAll('[data-belt]')].forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.belt === String(state.beltContainers));
+      const active = btn.dataset.belt === String(state.beltContainers);
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
   }
   if (beltCaption) {
@@ -1275,7 +1347,9 @@ function syncSegmentedControls() {
   }
   if (planButtons) {
     [...planButtons.querySelectorAll('[data-plan]')].forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.plan === state.planSource);
+      const active = btn.dataset.plan === state.planSource;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
   }
 }
@@ -1290,18 +1364,35 @@ function renderAll(recomputeVariants = true) {
   if (recomputeVariants) renderVariants();
 }
 
-async function init() {
-  const resp = await fetch('artifacts.json');
-  const artifacts = (await resp.json()).map(normalizeArt);
-  artifacts.sort((a,b) => a.name.localeCompare(b.name, 'ru'));
-  state.artifacts = artifacts;
-  state.artifactsMap = Object.fromEntries(artifacts.map(a => [a.name, a]));
+function scheduleVariantsRecompute() {
+  if (variantsDebounceTimer) clearTimeout(variantsDebounceTimer);
+  variantsDebounceTimer = setTimeout(() => {
+    renderVariants();
+    variantsDebounceTimer = null;
+  }, 220);
+}
 
-  loadState();
-  beltSelect.value = String(state.beltContainers);
-  planSourceSelect.value = state.planSource;
-  ensureSlotsLength();
-  renderAll();
+async function init() {
+  try {
+    const resp = await fetch('artifacts.json');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const artifacts = (await resp.json()).map(normalizeArt);
+    artifacts.sort((a,b) => a.name.localeCompare(b.name, 'ru'));
+    state.artifacts = artifacts;
+    state.artifactsMap = Object.fromEntries(artifacts.map(a => [a.name, a]));
+
+    loadState();
+    beltSelect.value = String(state.beltContainers);
+    planSourceSelect.value = state.planSource;
+    ensureSlotsLength();
+    renderAll();
+  } catch (err) {
+    console.error('Не удалось загрузить artifacts.json:', err);
+    if (variantsRoot) {
+      variantsRoot.innerHTML = `<div class="empty-state">Ошибка загрузки базы артефактов. Проверь файл <code>artifacts.json</code> и перезагрузи страницу.</div>`;
+    }
+    alert('Не удалось загрузить базу артефактов (artifacts.json). Проверь файл и перезагрузи страницу.');
+  }
 }
 
 document.getElementById('applyBestBtn').addEventListener('click', applyBestBuild);
@@ -1338,6 +1429,29 @@ if (planButtons) {
     renderAll();
   });
 }
+if (beltButtons) {
+  beltButtons.addEventListener('keydown', (e) => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    e.preventDefault();
+    const min = 1, max = 5;
+    const delta = e.key === 'ArrowRight' ? 1 : -1;
+    state.beltContainers = Math.max(min, Math.min(max, state.beltContainers + delta));
+    beltSelect.value = String(state.beltContainers);
+    ensureSlotsLength();
+    saveState();
+    renderAll();
+  });
+}
+if (planButtons) {
+  planButtons.addEventListener('keydown', (e) => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    e.preventDefault();
+    state.planSource = state.planSource === 'inventory' ? 'all' : 'inventory';
+    planSourceSelect.value = state.planSource;
+    saveState();
+    renderAll();
+  });
+}
 
 inventorySearch.addEventListener('input', renderInventory);
 pickerSearch.addEventListener('input', renderPicker);
@@ -1348,6 +1462,11 @@ if (savesModal) {
     if (e.target.dataset.closeSaves === '1') closeSavesModal();
   });
 }
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!pickerModal.classList.contains('hidden')) closePicker();
+  if (savesModal && !savesModal.classList.contains('hidden')) closeSavesModal();
+});
 window.addEventListener('beforeunload', saveState);
 
 init();

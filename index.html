@@ -50,9 +50,9 @@
 
         <div class="action-box">
           <button id="applyBestBtn" class="btn primary">Автосборка</button>
-          <button id="refreshVariantsBtn" class="btn">Варианты</button>
-          <button id="clearBuildBtn" class="btn">Очистить</button>
-          <button id="openSavesBtn" class="btn">Сохранить / загрузить</button>
+          <button id="refreshVariantsBtn" class="btn secondary">Варианты</button>
+          <button id="clearBuildBtn" class="btn ghost">Очистить</button>
+          <button id="openSavesBtn" class="btn secondary">Сохранить / загрузить</button>
         </div>
       </div>
       <div class="zone-rad-badge" aria-hidden="true">☢</div>
@@ -77,6 +77,7 @@
           <h2>Сборка</h2>
         </div>
         <div class="muted small">Замок фиксирует слот и подсвечивает ячейку.</div>
+        <div class="muted small">💡 Перетаскивай арты ЛКМ между ячейками для быстрой перестановки.</div>
         <div id="containersRoot" class="containers-root"></div>
       </section>
 
@@ -85,6 +86,7 @@
           <h2>Итог</h2>
         </div>
         <div id="totalsGrid" class="totals-grid"></div>
+        <div id="decisionExplain" class="subpanel decision-explain"></div>
 
         <div class="muted small totals-hint">± рядом с цифрой меняет приоритет.</div>
         <div class="totals-actions">
