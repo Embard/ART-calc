@@ -5,6 +5,7 @@ const state = {
   locked: [],
   priorities: {},
   variants: [],
+  lastTweakedMetric: null,
   beltCount: 5,
   planSource: 'inventory',
   slotEditing: null,
@@ -55,6 +56,7 @@ function loadState() {
     state.slots = Array.isArray(data.slots) ? data.slots : [];
     state.locked = Array.isArray(data.locked) ? data.locked : [];
     state.priorities = data.priorities || {};
+    state.lastTweakedMetric = data.lastTweakedMetric || null;
   } catch {
     // ignore corrupted state
   }
@@ -67,7 +69,8 @@ function saveState() {
     planSource: state.planSource,
     slots: state.slots,
     locked: state.locked,
-    priorities: state.priorities
+    priorities: state.priorities,
+    lastTweakedMetric: state.lastTweakedMetric
   }));
 }
 
@@ -131,7 +134,7 @@ function scoreArtifact(art, totals) {
   );
 }
 
-function scoreTotals(totals) {
+function scoreTotals(totals, baselineTotals = null, focusedMetric = null) {
   let score = 0;
   metrics.forEach(([key, , direction]) => {
     const value = Number(totals[key] || 0) * direction;
@@ -140,14 +143,24 @@ function scoreTotals(totals) {
 
   if (totals.health < 4) score -= (4 - totals.health) * 40;
   if (totals.radBalance < 8) score -= (8 - totals.radBalance) * 10;
-  if (totals.food < -120) score -= Math.abs(totals.food + 120) * 0.3;
-  if (totals.water < -120) score -= Math.abs(totals.water + 120) * 0.3;
+  if (totals.food < -30) score -= Math.abs(totals.food + 30) * 0.18;
+  if (totals.water < -30) score -= Math.abs(totals.water + 30) * 0.18;
+
+  // Soft balance rule: when user buffs one metric (e.g. shock), keep others near current build.
+  if (baselineTotals) {
+    metrics.forEach(([key]) => {
+      if (key === focusedMetric) return;
+      const drift = Math.abs(Number(totals[key] || 0) - Number(baselineTotals[key] || 0));
+      score -= drift * 0.08;
+    });
+  }
   return score;
 }
 
 function buildVariants(limit = 6) {
   syncSlots();
   const totalSlots = state.slots.length;
+  const baselineTotals = aggregateTotals();
   const baseTotals = Object.fromEntries(metrics.map(([k]) => [k, 0]));
   const lockedSlots = [];
   const freeSlots = [];
@@ -166,7 +179,7 @@ function buildVariants(limit = 6) {
   let beam = [{
     slots: baseSlots,
     totals: { ...baseTotals },
-    score: scoreTotals(baseTotals)
+    score: scoreTotals(baseTotals, baselineTotals, state.lastTweakedMetric)
   }];
   const BEAM_WIDTH = 40;
 
@@ -181,7 +194,7 @@ function buildVariants(limit = 6) {
         newSlots[slotIdx] = art.name;
         const newTotals = { ...node.totals };
         metrics.forEach(([key]) => newTotals[key] += Number(art[key] || 0));
-        const newScore = scoreTotals(newTotals);
+        const newScore = scoreTotals(newTotals, baselineTotals, state.lastTweakedMetric);
         next.push({ slots: newSlots, totals: newTotals, score: newScore });
       });
     });
@@ -201,7 +214,7 @@ function buildVariants(limit = 6) {
   state.variants = uniq.slice(0, Math.max(limit, 1));
 
   if (!state.variants.length) {
-    state.variants = [{ slots: state.slots.slice(), totals: aggregateTotals(), score: scoreTotals(aggregateTotals()) }];
+    state.variants = [{ slots: state.slots.slice(), totals: aggregateTotals(), score: scoreTotals(aggregateTotals(), baselineTotals, state.lastTweakedMetric) }];
   }
   const best = state.variants[0];
   state.slots = best.slots.slice(0, totalSlots);
@@ -378,7 +391,7 @@ function renderSlots() {
 
 function renderTotals() {
   const totals = aggregateTotals();
-  const buildScore = Math.round(scoreTotals(totals));
+  const buildScore = Math.round(scoreTotals(totals, totals, null));
   els.totals.innerHTML = '';
   metrics.forEach(([key, label, direction]) => {
     const value = totals[key];
@@ -411,6 +424,7 @@ function renderTotals() {
 function setPriority(key, delta) {
   const current = Number(state.priorities[key] || 0);
   state.priorities[key] = Math.max(-2, Math.min(2, current + delta));
+  state.lastTweakedMetric = key;
   buildVariants(8);
   saveState();
   renderAll();
