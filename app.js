@@ -2,6 +2,7 @@
 const state = {
   artifacts: [],
   artifactsMap: {},
+  artifactIndexMap: {},
   inventory: {},
   beltContainers: 5,
   planSource: 'inventory',
@@ -88,46 +89,50 @@ function describeActiveTargetsShort() {
 }
 function goalCheckForVariant(key, cand) {
   const t = cand.totals;
-  const strength = Math.abs(Number(state.targets[key] || 0));
+  const raw = Number(state.targets[key] || 0);
+  const strength = Math.abs(raw);
   if (!strength) return null;
-  const up = Number(state.targets[key]) > 0;
-  if (!up) return null;
+  const up = raw > 0;
 
   switch (key) {
     case 'health':
-      return up ? t.health >= Math.max(requiredHealthForHunger(t) + (strength === 2 ? 3 : 1), 3) : true;
+      return up
+        ? t.health >= Math.max(requiredHealthForHunger(t) + (strength === 2 ? 3 : 1), 3)
+        : t.health <= (strength === 2 ? 3 : 6);
     case 'blood': {
       const target = desiredBloodTarget(t);
-      return up ? t.blood >= (strength === 2 ? target : Math.max(50, Math.round(target * 0.7))) : true;
+      return up
+        ? t.blood >= (strength === 2 ? target : Math.max(50, Math.round(target * 0.7)))
+        : t.blood <= (strength === 2 ? Math.round(target * 0.6) : Math.round(target * 0.9));
     }
     case 'shock':
-      return up ? t.shock >= (strength === 2 ? 50 : 20) : true;
+      return up ? t.shock >= (strength === 2 ? 50 : 20) : t.shock <= (strength === 2 ? 15 : 35);
     case 'water':
-      return up ? t.water >= (strength === 2 ? 0 : -120) : true;
+      return up ? t.water >= (strength === 2 ? 0 : -120) : t.water <= (strength === 2 ? -140 : -60);
     case 'food':
-      return up ? t.food >= (strength === 2 ? 0 : -120) : true;
+      return up ? t.food >= (strength === 2 ? 0 : -120) : t.food <= (strength === 2 ? -140 : -60);
     case 'radOut':
-      return up ? t.radOut >= (strength === 2 ? 150 : 70) : true;
+      return up ? t.radOut >= (strength === 2 ? 150 : 70) : t.radOut <= (strength === 2 ? 30 : 80);
     case 'radIn':
-      return up ? t.radIn <= (strength === 2 ? 20 : 60) : true;
+      return up ? t.radIn <= (strength === 2 ? 20 : 60) : t.radIn >= (strength === 2 ? 90 : 40);
     case 'radBalance':
-      return up ? t.radBalance >= (strength === 2 ? 25 : 10) : true;
+      return up ? t.radBalance >= (strength === 2 ? 25 : 10) : t.radBalance <= (strength === 2 ? 0 : 8);
     case 'bleedChance':
-      return up ? t.bleedChance <= (strength === 2 ? -50 : 0) : true;
+      return up ? t.bleedChance <= (strength === 2 ? -50 : 0) : t.bleedChance >= (strength === 2 ? 20 : 0);
     case 'bleedHeal':
-      return up ? t.bleedHeal >= (strength === 2 ? 100 : 40) : true;
+      return up ? t.bleedHeal >= (strength === 2 ? 100 : 40) : t.bleedHeal <= (strength === 2 ? 10 : 40);
     default:
       return true;
   }
 }
 function describeGoalFit(cand) {
-  const active = activeTargetEntries().filter(([, value]) => Number(value) > 0);
+  const active = activeTargetEntries();
   if (!active.length) return '';
   const met = [];
   const missed = [];
   active.forEach(([key, value]) => {
     const okay = goalCheckForVariant(key, cand);
-    const short = `${targetLabels[key]} ↑`;
+    const short = `${targetLabels[key]} ${value > 0 ? '↑' : '↓'}`;
     if (okay) met.push(short);
     else missed.push(short);
   });
@@ -158,6 +163,7 @@ const variantsRoot = document.getElementById('variantsRoot');
 const beltButtons = document.getElementById('beltButtons');
 const beltCaption = document.getElementById('beltCaption');
 const planButtons = document.getElementById('planButtons');
+const systemStatus = document.getElementById('systemStatus');
 const savesModal = document.getElementById('savesModal');
 const buildPresetNameInput = document.getElementById('buildPresetName');
 const inventoryPresetNameInput = document.getElementById('inventoryPresetName');
@@ -877,7 +883,7 @@ function lockedCountsArray() {
   const counts = Array(state.artifacts.length).fill(0);
   state.slots.forEach((name, idx) => {
     if (!name || !state.locked[idx]) return;
-    const artIdx = state.artifacts.findIndex(a => a.name === name);
+    const artIdx = state.artifactIndexMap[name];
     if (artIdx >= 0) counts[artIdx] += 1;
   });
   return counts;
@@ -1380,18 +1386,26 @@ async function init() {
     artifacts.sort((a,b) => a.name.localeCompare(b.name, 'ru'));
     state.artifacts = artifacts;
     state.artifactsMap = Object.fromEntries(artifacts.map(a => [a.name, a]));
+    state.artifactIndexMap = Object.fromEntries(artifacts.map((a, idx) => [a.name, idx]));
 
     loadState();
     beltSelect.value = String(state.beltContainers);
     planSourceSelect.value = state.planSource;
     ensureSlotsLength();
     renderAll();
+    if (systemStatus) {
+      systemStatus.classList.add('hidden');
+      systemStatus.textContent = '';
+    }
   } catch (err) {
     console.error('Не удалось загрузить artifacts.json:', err);
     if (variantsRoot) {
       variantsRoot.innerHTML = `<div class="empty-state">Ошибка загрузки базы артефактов. Проверь файл <code>artifacts.json</code> и перезагрузи страницу.</div>`;
     }
-    alert('Не удалось загрузить базу артефактов (artifacts.json). Проверь файл и перезагрузи страницу.');
+    if (systemStatus) {
+      systemStatus.classList.remove('hidden');
+      systemStatus.innerHTML = `⚠ Ошибка загрузки базы артефактов. Проверь <code>artifacts.json</code> и обнови страницу.`;
+    }
   }
 }
 
