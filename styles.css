@@ -237,7 +237,10 @@ select, input, .btn {
   height: 30px;
   padding: 0;
 }
+ codex/add-customizable-priority-settings-99npv3
  test
+
+ main
 .total-row {
   display: flex;
   justify-content: space-between;
@@ -270,6 +273,7 @@ select, input, .btn {
 .pos { color: var(--good); }
 .neg { color: var(--bad); }
  codex/add-customizable-priority-settings-99npv3
+ codex/add-customizable-priority-settings-99npv3
 .summary {
   margin-top: 8px;
   border: 1px solid rgba(113, 169, 106, 0.28);
@@ -281,6 +285,25 @@ select, input, .btn {
 .summary ul { margin: 0; padding-left: 16px; display: grid; gap: 3px; color: var(--muted); font-size: 12px; }
 
 .alternatives-box {
+
+.alternatives-box {
+  margin-top: 12px;
+}
+.alternatives-box h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.alternatives {
+  display: grid;
+  gap: 6px;
+}
+.alt-item {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+.critique {
+ main
   margin-top: 12px;
 }
 .alternatives-box h3 {
@@ -376,5 +399,8 @@ dialog {
   .topbar { flex-direction: column; }
   .top-controls { grid-template-columns: 1fr; width: 100%; }
   .kpi-row { grid-template-columns: 1fr; }
+ codex/add-customizable-priority-settings-99npv3
  test
+
+ main
 }
