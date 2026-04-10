@@ -1,196 +1,123 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STALKER DayZ — помощник по сборкам</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <div class="bg"></div>
-    <div class="app">
-    <header class="topbar glass">
-      <div class="brand">
-        <div class="eyebrow">ZONE PDA // LOADOUT</div>
-        <h1>Помощник по сборкам артефактов</h1><div class="brand-note">Безопасный автоподбор артефактных сборок.</div>
-      </div>
-      
-      <div class="top-controls">
-        <div class="control-box">
-          <div class="stack control-group-wrap">
-            <span>Пояс</span>
-            <div class="segmented" id="beltButtons" role="group" aria-label="Пояс">
-              <button class="seg-btn" type="button" data-belt="1">1</button>
-              <button class="seg-btn" type="button" data-belt="2">2</button>
-              <button class="seg-btn" type="button" data-belt="3">3</button>
-              <button class="seg-btn" type="button" data-belt="4">4</button>
-              <button class="seg-btn" type="button" data-belt="5">5</button>
-            </div>
-            <div class="control-caption" id="beltCaption">5 контейнеров (15 слотов)</div>
-            <select id="beltSelect" class="hidden-native-select" aria-hidden="true" tabindex="-1">
-              <option value="1">1 контейнер (3 слота)</option>
-              <option value="2">2 контейнера (6 слотов)</option>
-              <option value="3">3 контейнера (9 слотов)</option>
-              <option value="4">4 контейнера (12 слотов)</option>
-              <option value="5" selected>5 контейнеров (15 слотов)</option>
-            </select>
-          </div>
-          <div class="stack control-group-wrap">
-            <span>Подбор</span>
-            <div class="segmented segmented-wide" id="planButtons" role="group" aria-label="Подбор">
-              <button class="seg-btn" type="button" data-plan="inventory">Из инвентаря</button>
-              <button class="seg-btn" type="button" data-plan="all">Все арты</button>
-            </div>
-            <select id="planSourceSelect" class="hidden-native-select" aria-hidden="true" tabindex="-1">
-              <option value="inventory" selected>Из инвентаря</option>
-              <option value="all">Все арты</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="action-box">
-          <button id="applyBestBtn" class="btn primary">Автосборка</button>
-          <button id="refreshVariantsBtn" class="btn">Варианты</button>
-          <button id="clearBuildBtn" class="btn">Очистить</button>
-          <button id="openSavesBtn" class="btn">Сохранить / загрузить</button>
-        </div>
-      </div>
-      <div class="zone-rad-badge" aria-hidden="true">☢</div>
-    </header>
-
-    <main class="layout">
-      <aside class="panel glass inventory-panel">
-        <div class="panel-title-row panel-title-stack">
-          <h2>Инвентарь</h2>
-          <div class="toolbar toolbar-search">
-            <input id="inventorySearch" type="search" placeholder="Поиск..." />
-          </div>
-        </div>
-        <div class="muted small">
-          Укажи реальные количества артов.
-        </div>
-        <div class="inventory-list" id="inventoryList"></div>
-      </aside>
-
-      <section class="panel glass builder-panel">
-        <div class="panel-title-row panel-title-simple">
-          <h2>Сборка</h2>
-        </div>
-        <div class="muted small">Замок фиксирует слот и подсвечивает ячейку.</div>
-        <div id="containersRoot" class="containers-root"></div>
-      </section>
-
-      <aside class="panel glass sidebar-panel">
-        <div class="panel-title-row panel-title-simple">
-          <h2>Итог</h2>
-        </div>
-        <div id="totalsGrid" class="totals-grid"></div>
-
-        <div class="muted small totals-hint">± рядом с цифрой меняет приоритет.</div>
-        <div class="totals-actions">
-          <button id="resetTargetsBtn" class="btn tiny">Сбросить приоритеты</button>
-        </div>
-
-        <div class="subpanel compact-summary">
-          <div class="subpanel-title">Сводка по сборке</div>
-          <div class="summary-mini">
-            <div class="summary-section">
-              <div class="summary-label">Что нужно закрыть</div>
-              <div id="needsList" class="needs-list"></div>
-            </div>
-            <div class="summary-section">
-              <div class="summary-label">Чем закрыть из твоего</div>
-              <div id="ownedSuggestions" class="suggestions-list"></div>
-            </div>
-            <div class="summary-section">
-              <div class="summary-label">Если не хватает</div>
-              <div id="missingSuggestions" class="suggestions-list"></div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <aside class="panel glass variants-panel side-variants-panel">
-        <div class="panel-title-row panel-title-simple">
-          <h2>Альт. сборки</h2>
-        </div>
-        <div class="muted small">
-          Быстрые безопасные пресеты. Кнопка «Варианты» пересчитывает список.
-        </div>
-        <div id="variantsRoot" class="variants-root"></div>
-      </aside>
-    </main>
-  </div>
-
-  <div id="pickerModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" data-close-picker="1"></div>
-    <div class="modal-card glass">
-      <div class="modal-header">
-        <div>
-          <div class="eyebrow">ВЫБОР АРТА</div>
-          <h3 id="pickerTitle">Выбери артефакт</h3>
-        </div>
-        <button class="icon-btn" data-close-picker="1" aria-label="Закрыть">✕</button>
-      </div>
-      <div class="picker-toolbar">
-        <input id="pickerSearch" type="search" placeholder="Поиск..." />
-        <label class="checkbox">
-          <input id="pickerOwnedOnly" type="checkbox" checked />
-          <span>Только из моего</span>
-        </label>
-      </div>
-      <div id="pickerList" class="picker-list"></div>
-    </div>
-  </div>
-
-  
-  <div id="savesModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" data-close-saves="1"></div>
-    <div class="modal-card glass saves-modal-card">
-      <div class="modal-header">
-        <div>
-          <div class="eyebrow">ZONE PDA MEMORY</div>
-          <h3>Сохранить / загрузить</h3>
-        </div>
-        <button class="icon-btn" data-close-saves="1" aria-label="Закрыть">✕</button>
-      </div>
-
-      <div class="saves-grid">
-        <section class="save-panel">
-          <div class="save-panel-head">Сборки</div>
-          <div class="save-create-row">
-            <input id="buildPresetName" type="search" placeholder="Название сборки..." />
-            <button id="saveBuildPresetBtn" class="btn primary">Сохранить</button>
-          </div>
-          <div id="buildPresetsList" class="preset-list"></div>
-        </section>
-
-        <section class="save-panel">
-          <div class="save-panel-head">Инвентари</div>
-          <div class="save-create-row">
-            <input id="inventoryPresetName" type="search" placeholder="Название инвентаря..." />
-            <button id="saveInventoryPresetBtn" class="btn primary">Сохранить</button>
-          </div>
-          <div id="inventoryPresetsList" class="preset-list"></div>
-        </section>
-      </div>
-    </div>
-  </div>
-
-
-  <template id="slotTemplate">
-    <div class="slot-card">
-      <button class="slot-main" type="button">
-        <div class="slot-icon"></div>
-        <div class="slot-name">Пусто</div>
-      </button>
-      <div class="slot-actions">
-        <button class="icon-action lock-btn" type="button" title="Зафиксировать" aria-label="Зафиксировать">🔓</button>
-        <button class="icon-action remove-btn" type="button" title="Убрать" aria-label="Убрать">✕</button>
-      </div>
-    </div>
-  </template>
-
-  <script src="app.js"></script>
-</body>
-</html>
+diff --git a/index.html b/index.html
+index 273335567210c9eb7548103e4fe37d60f64b2ef0..66284e001742543d1550a0ee96b2d75212c21fff 100644
+--- a/index.html
++++ b/index.html
+@@ -1,112 +1,115 @@
+ <!DOCTYPE html>
+ <html lang="ru">
+ <head>
+   <meta charset="UTF-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <title>STALKER DayZ — помощник по сборкам</title>
+   <link rel="stylesheet" href="styles.css" />
+ </head>
+ <body>
+   <div class="bg"></div>
+     <div class="app">
++    <div id="systemStatus" class="system-status hidden" role="status" aria-live="polite"></div>
+     <header class="topbar glass">
+       <div class="brand">
+         <div class="eyebrow">ZONE PDA // LOADOUT</div>
+         <h1>Помощник по сборкам артефактов</h1><div class="brand-note">Безопасный автоподбор артефактных сборок.</div>
+       </div>
+       
+       <div class="top-controls">
+         <div class="control-box">
+           <div class="stack control-group-wrap">
+             <span>Пояс</span>
+             <div class="segmented" id="beltButtons" role="group" aria-label="Пояс">
+               <button class="seg-btn" type="button" data-belt="1">1</button>
+               <button class="seg-btn" type="button" data-belt="2">2</button>
+               <button class="seg-btn" type="button" data-belt="3">3</button>
+               <button class="seg-btn" type="button" data-belt="4">4</button>
+               <button class="seg-btn" type="button" data-belt="5">5</button>
+             </div>
+             <div class="control-caption" id="beltCaption">5 контейнеров (15 слотов)</div>
+             <select id="beltSelect" class="hidden-native-select" aria-hidden="true" tabindex="-1">
+               <option value="1">1 контейнер (3 слота)</option>
+               <option value="2">2 контейнера (6 слотов)</option>
+               <option value="3">3 контейнера (9 слотов)</option>
+               <option value="4">4 контейнера (12 слотов)</option>
+               <option value="5" selected>5 контейнеров (15 слотов)</option>
+             </select>
+           </div>
+           <div class="stack control-group-wrap">
+             <span>Подбор</span>
+             <div class="segmented segmented-wide" id="planButtons" role="group" aria-label="Подбор">
+               <button class="seg-btn" type="button" data-plan="inventory">Из инвентаря</button>
+               <button class="seg-btn" type="button" data-plan="all">Все арты</button>
+             </div>
+             <select id="planSourceSelect" class="hidden-native-select" aria-hidden="true" tabindex="-1">
+               <option value="inventory" selected>Из инвентаря</option>
+               <option value="all">Все арты</option>
+             </select>
+           </div>
+         </div>
+ 
+         <div class="action-box">
+           <button id="applyBestBtn" class="btn primary">Автосборка</button>
+-          <button id="refreshVariantsBtn" class="btn">Варианты</button>
+-          <button id="clearBuildBtn" class="btn">Очистить</button>
+-          <button id="openSavesBtn" class="btn">Сохранить / загрузить</button>
++          <button id="refreshVariantsBtn" class="btn secondary">Варианты</button>
++          <button id="clearBuildBtn" class="btn ghost">Очистить</button>
++          <button id="openSavesBtn" class="btn secondary">Сохранить / загрузить</button>
+         </div>
+       </div>
+       <div class="zone-rad-badge" aria-hidden="true">☢</div>
+     </header>
+ 
+     <main class="layout">
+       <aside class="panel glass inventory-panel">
+         <div class="panel-title-row panel-title-stack">
+           <h2>Инвентарь</h2>
+           <div class="toolbar toolbar-search">
+             <input id="inventorySearch" type="search" placeholder="Поиск..." />
+           </div>
+         </div>
+         <div class="muted small">
+           Укажи реальные количества артов.
+         </div>
+         <div class="inventory-list" id="inventoryList"></div>
+       </aside>
+ 
+       <section class="panel glass builder-panel">
+         <div class="panel-title-row panel-title-simple">
+           <h2>Сборка</h2>
+         </div>
+         <div class="muted small">Замок фиксирует слот и подсвечивает ячейку.</div>
++        <div class="muted small">💡 Перетаскивай арты ЛКМ между ячейками для быстрой перестановки.</div>
+         <div id="containersRoot" class="containers-root"></div>
+       </section>
+ 
+       <aside class="panel glass sidebar-panel">
+         <div class="panel-title-row panel-title-simple">
+           <h2>Итог</h2>
+         </div>
+         <div id="totalsGrid" class="totals-grid"></div>
++        <div id="decisionExplain" class="subpanel decision-explain"></div>
+ 
+         <div class="muted small totals-hint">± рядом с цифрой меняет приоритет.</div>
+         <div class="totals-actions">
+           <button id="resetTargetsBtn" class="btn tiny">Сбросить приоритеты</button>
+         </div>
+ 
+         <div class="subpanel compact-summary">
+           <div class="subpanel-title">Сводка по сборке</div>
+           <div class="summary-mini">
+             <div class="summary-section">
+               <div class="summary-label">Что нужно закрыть</div>
+               <div id="needsList" class="needs-list"></div>
+             </div>
+             <div class="summary-section">
+               <div class="summary-label">Чем закрыть из твоего</div>
+               <div id="ownedSuggestions" class="suggestions-list"></div>
+             </div>
+             <div class="summary-section">
+               <div class="summary-label">Если не хватает</div>
+               <div id="missingSuggestions" class="suggestions-list"></div>
+             </div>
+           </div>
+         </div>
+       </aside>
+ 
