@@ -71,7 +71,11 @@ const state = {
   locked: [],
   beltCount: 5,
   planSource: 'inventory',
+ codex/add-customizable-priority-settings-99npv3
   priorities: Object.fromEntries(METRICS.map(([k]) => [k, 0])),
+
+  priorities: {},
+ test
   alternatives: [],
   slotEditing: null,
   dragIndex: null,
@@ -95,6 +99,7 @@ const els = {
   kpiRad: document.getElementById('kpiRad'),
   kpiStatus: document.getElementById('kpiStatus'),
   selfCritique: document.getElementById('selfCritique'),
+ codex/add-customizable-priority-settings-99npv3
   alternatives: document.getElementById('alternatives'),
   summaryBox: document.getElementById('summaryBox'),
   storageBtn: document.getElementById('storageBtn'),
@@ -128,6 +133,27 @@ function syncSlots() {
   state.locked = state.locked.slice(0, need);
 }
 
+  priorityGrid: document.getElementById('priorityGrid'),
+  prioritiesReset: document.getElementById('prioritiesReset'),
+  alternatives: document.getElementById('alternatives')
+};
+
+const BASE_WEIGHTS = {
+  health: 3.2,
+  blood: 0.4,
+  shock: 1.1,
+  water: 0.45,
+  food: 0.45,
+  radOut: 0.9,
+  radIn: 1.7,
+  radBalance: 2.6,
+  bleedChance: 1.4,
+  bleedHeal: 0.8
+};
+
+const DEFAULT_PRIORITIES = Object.fromEntries(metrics.map(([key]) => [key, 0]));
+ test
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -138,8 +164,14 @@ function loadState() {
     state.planSource = data.planSource === 'all' ? 'all' : 'inventory';
     state.slots = Array.isArray(data.slots) ? data.slots : [];
     state.locked = Array.isArray(data.locked) ? data.locked : [];
+ codex/add-customizable-priority-settings-99npv3
     state.priorities = METRICS.reduce((acc, [key]) => {
       acc[key] = clamp(asNum(data.priorities?.[key]), -3, 3);
+
+    state.priorities = metrics.reduce((acc, [key]) => {
+      const value = Number(data.priorities?.[key] ?? DEFAULT_PRIORITIES[key]);
+      acc[key] = Math.max(-5, Math.min(5, value));
+ test
       return acc;
     }, {});
   } catch {
@@ -212,6 +244,7 @@ function metricUtility(metric, value) {
   return value;
 }
 
+ codex/add-customizable-priority-settings-99npv3
 function priorityCurve(priority) {
   if (priority === 0) return 1;
   const s = Math.sign(priority);
@@ -340,9 +373,116 @@ function autoBuild() {
         let score = scoreBuild(totals, nextSlots, nextUsed);
         if (candidate.slots[slotIndex] && candidate.slots[slotIndex] !== artifact.name) score -= tuning.build.diversityPenalty;
         next.push({ slots: nextSlots, totals, used: nextUsed, score });
+
+function toDesirableMetricValue(key, value) {
+  if (key === 'radIn' || key === 'bleedChance') return -value;
+  return value;
+}
+
+function getPriorityFactor(key) {
+  const manual = Number(state.priorities[key] || 0);
+  return 1 + manual * 0.22;
+}
+
+function scoreTotals(totals) {
+  let score = 0;
+  metrics.forEach(([key]) => {
+    const value = toDesirableMetricValue(key, Number(totals[key] || 0));
+    score += value * BASE_WEIGHTS[key] * getPriorityFactor(key);
+  });
+
+  const softFloors = {
+    health: 6,
+    radBalance: 15,
+    food: -80,
+    water: -80
+  };
+  Object.entries(softFloors).forEach(([key, floor]) => {
+    const deficit = Math.max(0, floor - Number(totals[key] || 0));
+    score -= deficit * deficit * 0.34;
+  });
+
+  const neutralKeys = metrics
+    .map(([key]) => key)
+    .filter(key => Math.abs(Number(state.priorities[key] || 0)) <= 1);
+  const stabilityPenalty = neutralKeys.reduce((sum, key) => {
+    const value = Number(totals[key] || 0);
+    return sum + Math.max(0, -value) * 0.08;
+  }, 0);
+
+  return score - stabilityPenalty;
+}
+
+function buildCandidatePool() {
+  return state.artifacts.filter(a => state.planSource === 'all' || Number(state.inventory[a.name] || 0) > 0);
+}
+
+function countUsedFromSlots(slots) {
+  return slots.reduce((acc, name) => {
+    if (!name) return acc;
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function canUseInPartial(name, usedMap, replacingName = null) {
+  if (state.planSource === 'all') return true;
+  const alreadyUsed = Number(usedMap[name] || 0) - (replacingName === name ? 1 : 0);
+  return alreadyUsed < Number(state.inventory[name] || 0);
+}
+
+function autoBuild() {
+  syncSlots();
+  const pickable = buildCandidatePool();
+  const unlockedIndexes = state.slots
+    .map((_, i) => i)
+    .filter(i => !state.locked[i]);
+
+  const baseSlots = state.slots.map((name, i) => state.locked[i] ? name : null);
+  const baseTotals = Object.fromEntries(metrics.map(([k]) => [k, 0]));
+  baseSlots.forEach(name => {
+    if (!name) return;
+    const art = getArtifact(name);
+    if (!art) return;
+    metrics.forEach(([key]) => {
+      baseTotals[key] += Number(art[key] || 0);
+    });
+  });
+
+  let beam = [{
+    slots: [...baseSlots],
+    used: countUsedFromSlots(baseSlots),
+    totals: { ...baseTotals },
+    score: scoreTotals(baseTotals)
+  }];
+  const beamWidth = 28;
+
+  unlockedIndexes.forEach(index => {
+    const nextBeam = [];
+    beam.forEach(candidate => {
+      pickable.forEach(art => {
+        if (!canUseInPartial(art.name, candidate.used, candidate.slots[index])) return;
+        const nextSlots = [...candidate.slots];
+        nextSlots[index] = art.name;
+        const nextUsed = { ...candidate.used, [art.name]: Number(candidate.used[art.name] || 0) + 1 };
+        const nextTotals = { ...candidate.totals };
+        metrics.forEach(([key]) => {
+          nextTotals[key] += Number(art[key] || 0);
+        });
+        nextBeam.push({
+          slots: nextSlots,
+          used: nextUsed,
+          totals: nextTotals,
+          score: scoreTotals(nextTotals)
+        });
+ test
       });
     });
+    nextBeam.sort((a, b) => b.score - a.score);
+    beam = nextBeam.slice(0, beamWidth);
+  });
 
+ codex/add-customizable-priority-settings-99npv3
     next.sort((a, b) => b.score - a.score);
     beam = next.slice(0, tuning.build.beamWidth);
   });
@@ -360,10 +500,30 @@ function autoBuild() {
     score: item.score,
     note: explainVariant(item.totals, item.slots)
   }));
+
+  const ranked = beam.sort((a, b) => b.score - a.score).slice(0, 4);
+  if (!ranked.length) {
+    state.alternatives = [];
+    saveState();
+    renderAll();
+    return;
+  }
+
+  state.slots = [...ranked[0].slots];
+  state.alternatives = ranked.slice(1).map((variant, idx) => ({
+    id: `alt-${Date.now()}-${idx}`,
+    label: `Вариант ${idx + 2}`,
+    score: variant.score,
+    slots: [...variant.slots],
+    totals: variant.totals
+  }));
+
+ test
   saveState();
   renderAll();
 }
 
+ codex/add-customizable-priority-settings-99npv3
 function explainVariant(totals, slots) {
   const bits = [];
   if (totals.blood >= 100) bits.push('кровь закрыта');
@@ -379,6 +539,83 @@ function explainVariant(totals, slots) {
 
 function clearBuild() {
   state.slots = state.slots.map((name, i) => (state.locked[i] ? name : null));
+
+function renderAlternatives() {
+  if (!els.alternatives) return;
+  els.alternatives.innerHTML = '';
+  if (!state.alternatives.length) {
+    els.alternatives.innerHTML = '<p class="mini">Альтернативы появятся после автосборки.</p>';
+    return;
+  }
+
+  state.alternatives.forEach(variant => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn alt-item';
+    const shock = Number(variant.totals.shock || 0);
+    const food = Number(variant.totals.food || 0);
+    const water = Number(variant.totals.water || 0);
+    btn.innerHTML = `<strong>${variant.label}</strong><span class="mini">Шок ${shock > 0 ? '+' : ''}${shock} • Еда ${food > 0 ? '+' : ''}${food} • Вода ${water > 0 ? '+' : ''}${water}</span>`;
+    btn.addEventListener('click', () => {
+      state.slots = [...variant.slots];
+      saveState();
+      renderAll();
+    });
+    els.alternatives.appendChild(btn);
+  });
+}
+
+function renderPriorities() {
+  if (!els.priorityGrid) return;
+  els.priorityGrid.innerHTML = '';
+
+  metrics.forEach(([key, label]) => {
+    const row = document.createElement('div');
+    row.className = 'priority-row';
+    const caption = document.createElement('span');
+    caption.textContent = label;
+
+    const controls = document.createElement('div');
+    controls.className = 'priority-stepper';
+    const minus = document.createElement('button');
+    minus.type = 'button';
+    minus.className = 'btn';
+    minus.textContent = '−';
+    const value = document.createElement('strong');
+    const current = Number(state.priorities[key] || 0);
+    value.textContent = `${current > 0 ? '+' : ''}${current}`;
+    const plus = document.createElement('button');
+    plus.type = 'button';
+    plus.className = 'btn';
+    plus.textContent = '+';
+
+    minus.addEventListener('click', () => {
+      state.priorities[key] = Math.max(-5, Number(state.priorities[key] || 0) - 1);
+      saveState();
+      renderPriorities();
+    });
+    plus.addEventListener('click', () => {
+      state.priorities[key] = Math.min(5, Number(state.priorities[key] || 0) + 1);
+      saveState();
+      renderPriorities();
+    });
+
+    controls.append(minus, value, plus);
+    row.append(caption, controls);
+    els.priorityGrid.appendChild(row);
+  });
+}
+
+function resetPriorities() {
+  state.priorities = { ...DEFAULT_PRIORITIES };
+  saveState();
+  renderPriorities();
+}
+
+function clearBuild() {
+  syncSlots();
+  state.slots = state.slots.map((slot, i) => state.locked[i] ? slot : null);
+ test
   state.alternatives = [];
   saveState();
   renderAll();
@@ -739,13 +976,16 @@ function saveInventoryPreset() {
 
 function renderAll() {
   renderInventory();
+  renderPriorities();
   renderSlots();
+  renderAlternatives();
   renderTotals();
   renderAlternatives();
 }
 
 async function init() {
   loadState();
+ codex/add-customizable-priority-settings-99npv3
   loadPresets();
 
   const response = await fetch('artifacts.json');
@@ -756,6 +996,14 @@ async function init() {
     radBalance: asNum(a.radBalance ?? asNum(a.radOut) - asNum(a.radIn))
   }));
   state.byName = new Map(state.artifacts.map((a) => [a.name, a]));
+
+  state.priorities = metrics.reduce((acc, [key]) => {
+    acc[key] = Number(state.priorities?.[key] ?? DEFAULT_PRIORITIES[key]);
+    return acc;
+  }, {});
+  const resp = await fetch('artifacts.json');
+  state.artifacts = await resp.json();
+ test
 
   syncSlots();
   els.beltCount.value = String(state.beltCount);
@@ -776,7 +1024,11 @@ async function init() {
     saveState();
     renderAll();
   });
+ codex/add-customizable-priority-settings-99npv3
 
+
+  els.prioritiesReset?.addEventListener('click', resetPriorities);
+ test
   els.autoBuild.addEventListener('click', autoBuild);
   els.variantsBtn.addEventListener('click', () => {
     autoBuild();

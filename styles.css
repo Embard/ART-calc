@@ -189,9 +189,55 @@ select, input, .btn {
   color: var(--muted);
   text-align: center;
 }
+ codex/add-customizable-priority-settings-99npv3
 .pick-btn { width: 100%; margin-top: auto; }
 .slot.drag-over { outline: 2px solid rgba(145, 255, 164, 0.85); }
 .totals { display: grid; gap: 4px; }
+
+.slot.drag-over {
+  outline: 2px solid rgba(125, 255, 155, 0.9);
+}
+.totals { display: grid; gap: 8px; }
+.priority-box {
+  margin-bottom: 12px;
+  border: 1px solid rgba(85, 147, 99, 0.35);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(14, 24, 18, 0.68);
+}
+.priority-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.priority-head h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.priority-grid {
+  display: grid;
+  gap: 6px;
+}
+.priority-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(85, 147, 99, 0.2);
+  padding-bottom: 4px;
+}
+.priority-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.priority-stepper .btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+}
+ test
 .total-row {
   display: flex;
   justify-content: space-between;
@@ -223,6 +269,7 @@ select, input, .btn {
 }
 .pos { color: var(--good); }
 .neg { color: var(--bad); }
+ codex/add-customizable-priority-settings-99npv3
 .summary {
   margin-top: 8px;
   border: 1px solid rgba(113, 169, 106, 0.28);
@@ -232,6 +279,24 @@ select, input, .btn {
 }
 .summary h3 { margin: 0 0 5px; font-size: 13px; color: var(--warn); }
 .summary ul { margin: 0; padding-left: 16px; display: grid; gap: 3px; color: var(--muted); font-size: 12px; }
+
+.alternatives-box {
+  margin-top: 12px;
+}
+.alternatives-box h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.alternatives {
+  display: grid;
+  gap: 6px;
+}
+.alt-item {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+ test
 .critique {
   margin-top: 8px;
   border-radius: 10px;
@@ -304,6 +369,12 @@ dialog {
   .topbar { grid-template-columns: 1fr; }
   .top-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .layout { grid-template-columns: 1fr; }
+ codex/add-customizable-priority-settings-99npv3
   .inventory-list { max-height: 42vh; }
   .alternatives { grid-template-columns: 1fr; }
+
+  .topbar { flex-direction: column; }
+  .top-controls { grid-template-columns: 1fr; width: 100%; }
+  .kpi-row { grid-template-columns: 1fr; }
+ test
 }
