@@ -116,16 +116,19 @@ function scoreArtifact(art, totals) {
 function autoBuild() {
   syncSlots();
   const totals = Object.fromEntries(metrics.map(([k]) => [k, 0]));
+
   state.slots.forEach((name, i) => {
     if (!state.locked[i] || !name) return;
     const art = getArtifact(name);
     if (!art) return;
     metrics.forEach(([key]) => totals[key] += Number(art[key] || 0));
   });
+
   const pickable = state.artifacts.filter(a => state.planSource === 'all' || Number(state.inventory[a.name] || 0) > 0);
 
   for (let i = 0; i < state.slots.length; i++) {
     if (state.locked[i]) continue;
+
     let best = null;
     let bestScore = -Infinity;
     pickable.forEach(art => {
@@ -136,6 +139,7 @@ function autoBuild() {
         best = art;
       }
     });
+
     state.slots[i] = best ? best.name : null;
     if (best) {
       metrics.forEach(([key]) => totals[key] += Number(best[key] || 0));
@@ -189,11 +193,13 @@ function renderInventory() {
 
       minus.onclick = () => {
         state.inventory[art.name] = Math.max(0, Number(state.inventory[art.name] || 0) - 1);
-        saveState(); renderAll();
+        saveState();
+        renderAll();
       };
       plus.onclick = () => {
         state.inventory[art.name] = Number(state.inventory[art.name] || 0) + 1;
-        saveState(); renderAll();
+        saveState();
+        renderAll();
       };
 
       right.append(minus, val, plus);
@@ -230,7 +236,10 @@ function renderPicker() {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'pick-item btn';
-      const avail = state.planSource === 'all' ? '∞' : Math.max(0, Number(state.inventory[art.name] || 0) - usedCount(art.name, state.slotEditing));
+      const avail = state.planSource === 'all'
+        ? '∞'
+        : Math.max(0, Number(state.inventory[art.name] || 0) - usedCount(art.name, state.slotEditing));
+
       btn.innerHTML = `
         <span class="pick-main">
           <img class="artifact-thumb" src="${imgOrFallback(art.image)}" alt="${art.name}" onerror="this.src='assets/artifacts/placeholder.png'" />
@@ -252,11 +261,13 @@ function renderPicker() {
 function renderSlots() {
   syncSlots();
   els.slots.innerHTML = '';
+
   state.slots.forEach((name, i) => {
     const cell = document.createElement('div');
     cell.className = 'slot';
     if (state.locked[i]) cell.classList.add('locked');
     cell.dataset.index = String(i);
+
     const art = name ? getArtifact(name) : null;
     cell.innerHTML = art
       ? `<div class="slot-top"><small>Слот ${i + 1}</small><button class="lock-btn" type="button">${state.locked[i] ? '🔒' : '🔓'}</button></div><img class="artifact-thumb" src="${imgOrFallback(art.image)}" alt="${art.name}" onerror="this.src='assets/artifacts/placeholder.png'" /><strong>${art.name}</strong><div class="mini">HP ${art.health} • Rad ${art.radBalance}</div><button class="btn pick-btn" type="button">Выбрать</button>`
@@ -265,6 +276,7 @@ function renderSlots() {
     const pickBtn = cell.querySelector('.pick-btn');
     if (pickBtn && state.locked[i]) pickBtn.disabled = true;
     pickBtn?.addEventListener('click', () => openPicker(i));
+
     const lockBtn = cell.querySelector('.lock-btn');
     lockBtn?.addEventListener('click', () => {
       state.locked[i] = !state.locked[i];
@@ -279,32 +291,39 @@ function renderSlots() {
         state.dragIndex = i;
       });
     }
+
     cell.addEventListener('dragover', (e) => {
       e.preventDefault();
       if (state.dragIndex === null || state.dragIndex === i || state.locked[i]) return;
       cell.classList.add('drag-over');
     });
+
     cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+
     cell.addEventListener('drop', (e) => {
       e.preventDefault();
       cell.classList.remove('drag-over');
       const from = state.dragIndex;
       if (from === null || from === i || state.locked[i] || state.locked[from]) return;
+
       const fromName = state.slots[from];
       const toName = state.slots[i];
       if (fromName && toName && (!canUse(fromName, i) || !canUse(toName, from))) return;
       if (fromName && !toName && !canUse(fromName, i)) return;
       if (!fromName) return;
+
       state.slots[from] = toName;
       state.slots[i] = fromName;
       state.dragIndex = null;
       saveState();
       renderAll();
     });
+
     cell.addEventListener('dragend', () => {
       state.dragIndex = null;
       document.querySelectorAll('.slot').forEach(el => el.classList.remove('drag-over'));
     });
+
     els.slots.appendChild(cell);
   });
 }
@@ -312,6 +331,7 @@ function renderSlots() {
 function renderTotals() {
   const totals = aggregateTotals();
   els.totals.innerHTML = '';
+
   metrics.forEach(([key, label]) => {
     const value = totals[key];
     const row = document.createElement('div');
