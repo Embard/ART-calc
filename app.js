@@ -7,6 +7,7 @@ const state = {
   planSource: 'inventory',
   slots: [],
   locked: [],
+  dragSlotIndex: null,
   pickerSlotIndex: null,
   variants: null,
   targets: {
@@ -90,6 +91,7 @@ function goalCheckForVariant(key, cand) {
   const strength = Math.abs(Number(state.targets[key] || 0));
   if (!strength) return null;
   const up = Number(state.targets[key]) > 0;
+  if (!up) return null;
 
   switch (key) {
     case 'health':
@@ -119,13 +121,13 @@ function goalCheckForVariant(key, cand) {
   }
 }
 function describeGoalFit(cand) {
-  const active = activeTargetEntries();
+  const active = activeTargetEntries().filter(([, value]) => Number(value) > 0);
   if (!active.length) return '';
   const met = [];
   const missed = [];
   active.forEach(([key, value]) => {
     const okay = goalCheckForVariant(key, cand);
-    const short = `${targetLabels[key]} ${value > 0 ? '↑' : '↓'}`;
+    const short = `${targetLabels[key]} ↑`;
     if (okay) met.push(short);
     else missed.push(short);
   });
@@ -718,11 +720,55 @@ function renderBuilder() {
       }
 
       if (artName && (used[artName] || 0) > Number(state.inventory[artName] || 0) && state.planSource === 'inventory') btn.classList.add('invalid');
+      btn.draggable = Boolean(artName && !locked);
 
       lockBtn.textContent = locked ? '🔒' : '🔓';
       lockBtn.classList.toggle('active', locked);
       lockBtn.title = locked ? 'Снять фиксацию' : 'Зафиксировать';
       delBtn.title = 'Убрать';
+
+      btn.addEventListener('dragstart', (e) => {
+        if (!state.slots[slotIndex] || state.locked[slotIndex]) {
+          e.preventDefault();
+          return;
+        }
+        state.dragSlotIndex = slotIndex;
+        slot.classList.add('dragging');
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', String(slotIndex));
+        }
+      });
+      btn.addEventListener('dragend', () => {
+        state.dragSlotIndex = null;
+        containersRoot.querySelectorAll('.slot-card.drag-over,.slot-card.dragging').forEach(el => {
+          el.classList.remove('drag-over', 'dragging');
+        });
+      });
+      btn.addEventListener('dragover', (e) => {
+        const from = state.dragSlotIndex;
+        if (from === null || from === slotIndex || state.locked[slotIndex]) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        slot.classList.add('drag-over');
+      });
+      btn.addEventListener('dragleave', () => {
+        slot.classList.remove('drag-over');
+      });
+      btn.addEventListener('drop', (e) => {
+        const from = state.dragSlotIndex;
+        slot.classList.remove('drag-over');
+        if (from === null || from === slotIndex || state.locked[slotIndex]) return;
+        e.preventDefault();
+        const moved = state.slots[from];
+        if (!moved) return;
+        const target = state.slots[slotIndex] || null;
+        state.slots[slotIndex] = moved;
+        state.slots[from] = target;
+        state.dragSlotIndex = null;
+        saveState();
+        renderAll();
+      });
 
       btn.addEventListener('click', () => openPicker(slotIndex));
       delBtn.addEventListener('click', () => {
@@ -788,7 +834,6 @@ function renderPicker() {
     card.addEventListener('click', () => {
       if (ownedOnly && !slotCanUseArt(art.name, slotIndex)) return;
       state.slots[slotIndex] = art.name;
-      if (!state.slots[slotIndex]) state.locked[slotIndex] = false;
       saveState(); renderAll(); closePicker();
     });
     pickerList.appendChild(card);
@@ -1291,17 +1336,26 @@ function renderAll(recomputeVariants = true) {
 }
 
 async function init() {
-  const resp = await fetch('artifacts.json');
-  const artifacts = (await resp.json()).map(normalizeArt);
-  artifacts.sort((a,b) => a.name.localeCompare(b.name, 'ru'));
-  state.artifacts = artifacts;
-  state.artifactsMap = Object.fromEntries(artifacts.map(a => [a.name, a]));
+  try {
+    const resp = await fetch('artifacts.json');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const artifacts = (await resp.json()).map(normalizeArt);
+    artifacts.sort((a,b) => a.name.localeCompare(b.name, 'ru'));
+    state.artifacts = artifacts;
+    state.artifactsMap = Object.fromEntries(artifacts.map(a => [a.name, a]));
 
-  loadState();
-  beltSelect.value = String(state.beltContainers);
-  planSourceSelect.value = state.planSource;
-  ensureSlotsLength();
-  renderAll();
+    loadState();
+    beltSelect.value = String(state.beltContainers);
+    planSourceSelect.value = state.planSource;
+    ensureSlotsLength();
+    renderAll();
+  } catch (err) {
+    console.error('Не удалось загрузить artifacts.json:', err);
+    if (variantsRoot) {
+      variantsRoot.innerHTML = `<div class="empty-state">Ошибка загрузки базы артефактов. Проверь файл <code>artifacts.json</code> и перезагрузи страницу.</div>`;
+    }
+    alert('Не удалось загрузить базу артефактов (artifacts.json). Проверь файл и перезагрузи страницу.');
+  }
 }
 
 document.getElementById('applyBestBtn').addEventListener('click', applyBestBuild);
