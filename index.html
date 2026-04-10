@@ -3,23 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ART-CALC // ZONE OPS</title>
-  <style>
-    /* Critical fallback styles: applied even if external styles.css fails to load. */
-    :root { --bg:#08100c; --panel:rgba(16,27,20,.88); --text:#d7f8d5; --muted:#8bb394; --good:#7dff9b; --bad:#ff6b6b; }
-    * { box-sizing:border-box; }
-    body { margin:0; color:var(--text); background:radial-gradient(circle at 20% 20%, #183424, transparent 40%), #070d09; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; min-height:100vh; }
-    .app { max-width:1500px; margin:0 auto; padding:22px; position:relative; z-index:1; }
-    .panel { background:var(--panel); border:1px solid rgba(64,168,94,.35); border-radius:16px; padding:14px; }
-    .topbar{ display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
-    .top-controls{ display:grid; grid-template-columns:repeat(2,minmax(200px,1fr)); gap:10px; }
-    .kpi-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:14px 0; }
-    .layout{ display:grid; grid-template-columns:1.2fr 1.3fr 1fr; gap:12px; }
-    .inventory-list{ display:grid; gap:8px; max-height:68vh; overflow:auto; }
-    .slot{ border:1px dashed rgba(130,214,152,.45); border-radius:12px; min-height:88px; padding:8px; background:rgba(8,16,12,.8); }
-    .slots{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-    @media (max-width:1120px){ .layout{grid-template-columns:1fr;} .topbar{flex-direction:column;} .top-controls{grid-template-columns:1fr;width:100%;} .kpi-row{grid-template-columns:1fr;} }
-  </style>
+  <title>ART-CALC // Zone PDA Terminal</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -29,9 +13,9 @@
   <main class="app">
     <header class="topbar panel">
       <div>
-        <p class="eyebrow">☢ ZONE PDA / ARTIFACT LOADOUT</p>
+        <p class="eyebrow">☢ ZONE OPS PDA</p>
         <h1>Калькулятор артефактов</h1>
-        <p class="subtitle">Тема: радиация / STALKER / Зона отчуждения. Быстрый, понятный и информативный подбор.</p>
+        <p class="subtitle">Инвентарь, сборка, приоритеты и варианты — в одном экране.</p>
       </div>
       <div class="top-controls">
         <label>
@@ -41,57 +25,50 @@
             <option value="2">2 (6 слотов)</option>
             <option value="3">3 (9 слотов)</option>
             <option value="4">4 (12 слотов)</option>
-            <option value="5" selected>5 (15 слотов)</option>
+            <option value="5">5 (15 слотов)</option>
           </select>
         </label>
         <label>
-          Режим подбора
+          Режим
           <select id="planSource">
-            <option value="inventory" selected>Только из инвентаря</option>
-            <option value="all">Из всей базы артефактов</option>
+            <option value="inventory">Только инвентарь</option>
+            <option value="all">Все артефакты</option>
           </select>
         </label>
-        <button id="autoBuild" class="btn btn-primary">Автосборка</button>
-        <button id="clearBuild" class="btn">Очистить</button>
+        <button id="autoBuild" class="btn btn-primary" type="button">Автосборка</button>
+        <button id="variantsBtn" class="btn" type="button">Варианты</button>
+        <button id="clearBuild" class="btn" type="button">Очистить</button>
+        <button id="storageBtn" class="btn" type="button">Сохранения</button>
       </div>
     </header>
 
     <section class="kpi-row">
-      <article class="panel kpi">
-        <h3>Занято слотов</h3>
-        <p id="kpiSlots">0 / 15</p>
-      </article>
-      <article class="panel kpi">
-        <h3>Рад-баланс</h3>
-        <p id="kpiRad">0</p>
-      </article>
-      <article class="panel kpi">
-        <h3>Статус сборки</h3>
-        <p id="kpiStatus">Ожидание</p>
-      </article>
+      <article class="panel kpi"><h3>Слоты</h3><p id="kpiSlots">0 / 15</p></article>
+      <article class="panel kpi"><h3>Рад-баланс</h3><p id="kpiRad">0</p></article>
+      <article class="panel kpi"><h3>Статус</h3><p id="kpiStatus">Ожидание</p></article>
     </section>
 
     <section class="layout">
-      <aside class="panel">
+      <aside class="panel inventory-col">
         <div class="block-head">
           <h2>Инвентарь</h2>
-          <input id="search" type="search" placeholder="Поиск артефакта..." />
+          <input id="search" type="search" placeholder="Поиск..." />
         </div>
-        <p class="hint">Укажи, сколько реально есть у тебя. Это влияет на автоподбор в режиме инвентаря.</p>
+        <p class="hint">ЛКМ ±1, быстрые кнопки ±5 для массовой настройки.</p>
         <div id="inventoryList" class="inventory-list"></div>
       </aside>
 
-      <section class="panel">
+      <section class="panel build-col">
         <div class="block-head">
           <h2>Слоты контейнеров</h2>
-          <p class="hint">Клик по кнопке «Выбрать» открывает выбор артефакта. 🔒 Закрепляй слот, чтобы автосборка его не трогала. Можно перетаскивать арты между слотами.</p>
+          <p class="hint">🔒 фиксирует слот. Drag&Drop работает только между незалоченными слотами.</p>
         </div>
         <div id="slots" class="slots"></div>
       </section>
 
-      <aside class="panel">
+      <aside class="panel stats-col">
         <div class="block-head">
-          <h2>Аналитика</h2>
+          <h2>Итоги и приоритеты</h2>
         </div>
         <div class="priority-box">
           <div class="priority-head">
@@ -102,12 +79,27 @@
           <div id="priorityGrid" class="priority-grid"></div>
         </div>
         <div id="totals" class="totals"></div>
+       codex/add-customizable-priority-settings-99npv3
+        <section class="summary">
+          <h3>Краткая сводка</h3>
+          <div id="summaryBox"></div>
+        </section>
+
         <div class="alternatives-box">
           <h3>Альтернативные сборки</h3>
           <div id="alternatives" class="alternatives"></div>
         </div>
+ test
         <div class="critique" id="selfCritique"></div>
       </aside>
+    </section>
+
+    <section id="variantsSection" class="panel variants-wrap">
+      <div class="block-head">
+        <h2>Топ-5 вариантов</h2>
+        <p class="hint">Кнопка «Варианты» пересчитывает и прокручивает сюда.</p>
+      </div>
+      <div id="alternatives" class="alternatives"></div>
     </section>
   </main>
 
@@ -115,24 +107,38 @@
     <form method="dialog" class="picker-form">
       <div class="picker-top">
         <h3>Выбор артефакта</h3>
-        <button class="btn">Закрыть</button>
+        <button class="btn" type="submit">Закрыть</button>
       </div>
-      <input id="pickerSearch" type="search" placeholder="Фильтр в списке" />
+      <input id="pickerSearch" type="search" placeholder="Фильтр..." />
       <div id="pickerList" class="picker-list"></div>
     </form>
   </dialog>
 
+  <dialog id="storageDialog">
+    <form method="dialog" class="storage-form">
+      <div class="picker-top">
+        <h3>Сохранения</h3>
+        <button class="btn" type="submit">Закрыть</button>
+      </div>
+      <section>
+        <h4>Сборка</h4>
+        <div class="save-row">
+          <input id="buildSaveName" type="text" placeholder="Название сборки" />
+          <button id="saveBuildBtn" class="btn" type="button">Сохранить</button>
+        </div>
+        <div id="buildsList" class="storage-list"></div>
+      </section>
+      <section>
+        <h4>Инвентарь</h4>
+        <div class="save-row">
+          <input id="invSaveName" type="text" placeholder="Название инвентаря" />
+          <button id="saveInvBtn" class="btn" type="button">Сохранить</button>
+        </div>
+        <div id="inventoriesList" class="storage-list"></div>
+      </section>
+    </form>
+  </dialog>
+
   <script src="app.js"></script>
-  <script>
-    // If external stylesheet didn't apply, keep a clear diagnostic in console.
-    (function () {
-      const panel = document.querySelector('.panel');
-      if (!panel) return;
-      const bg = getComputedStyle(panel).backgroundColor;
-      if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
-        console.warn('styles.css may be missing or blocked; critical fallback styles are active.');
-      }
-    })();
-  </script>
 </body>
 </html>
