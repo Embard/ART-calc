@@ -5,6 +5,8 @@ const state = {
   locked: [],
   beltCount: 5,
   planSource: 'inventory',
+  priorities: {},
+  alternatives: [],
   slotEditing: null,
   dragIndex: null
 };
@@ -37,8 +39,26 @@ const els = {
   kpiSlots: document.getElementById('kpiSlots'),
   kpiRad: document.getElementById('kpiRad'),
   kpiStatus: document.getElementById('kpiStatus'),
-  selfCritique: document.getElementById('selfCritique')
+  selfCritique: document.getElementById('selfCritique'),
+  priorityGrid: document.getElementById('priorityGrid'),
+  prioritiesReset: document.getElementById('prioritiesReset'),
+  alternatives: document.getElementById('alternatives')
 };
+
+const BASE_WEIGHTS = {
+  health: 3.2,
+  blood: 0.4,
+  shock: 1.1,
+  water: 0.45,
+  food: 0.45,
+  radOut: 0.9,
+  radIn: 1.7,
+  radBalance: 2.6,
+  bleedChance: 1.4,
+  bleedHeal: 0.8
+};
+
+const DEFAULT_PRIORITIES = Object.fromEntries(metrics.map(([key]) => [key, 0]));
 
 function loadState() {
   const raw = localStorage.getItem('art-calc-zone-v1');
@@ -50,6 +70,11 @@ function loadState() {
     state.planSource = data.planSource || 'inventory';
     state.slots = Array.isArray(data.slots) ? data.slots : [];
     state.locked = Array.isArray(data.locked) ? data.locked : [];
+    state.priorities = metrics.reduce((acc, [key]) => {
+      const value = Number(data.priorities?.[key] ?? DEFAULT_PRIORITIES[key]);
+      acc[key] = Math.max(-5, Math.min(5, value));
+      return acc;
+    }, {});
   } catch {
     // ignore corrupted state
   }
@@ -61,7 +86,8 @@ function saveState() {
     beltCount: state.beltCount,
     planSource: state.planSource,
     slots: state.slots,
-    locked: state.locked
+    locked: state.locked,
+    priorities: state.priorities
   }));
 }
 
@@ -97,62 +123,210 @@ function aggregateTotals() {
   return totals;
 }
 
-function scoreArtifact(art, totals) {
-  const lowHealth = totals.health < 6;
-  const lowRad = totals.radBalance < 15;
-  return (
-    art.health * (lowHealth ? 2.2 : 1.2) +
-    art.blood * 0.05 +
-    art.shock * 0.03 +
-    art.radBalance * (lowRad ? 1.5 : 1.0) +
-    art.bleedHeal * 0.03 -
-    Math.max(0, -art.food) * 0.02 -
-    Math.max(0, -art.water) * 0.02 -
-    art.radIn * 0.5 -
-    Math.max(0, art.bleedChance) * 0.05
-  );
+function toDesirableMetricValue(key, value) {
+  if (key === 'radIn' || key === 'bleedChance') return -value;
+  return value;
+}
+
+function getPriorityFactor(key) {
+  const manual = Number(state.priorities[key] || 0);
+  return 1 + manual * 0.22;
+}
+
+function scoreTotals(totals) {
+  let score = 0;
+  metrics.forEach(([key]) => {
+    const value = toDesirableMetricValue(key, Number(totals[key] || 0));
+    score += value * BASE_WEIGHTS[key] * getPriorityFactor(key);
+  });
+
+  const softFloors = {
+    health: 6,
+    radBalance: 15,
+    food: -80,
+    water: -80
+  };
+  Object.entries(softFloors).forEach(([key, floor]) => {
+    const deficit = Math.max(0, floor - Number(totals[key] || 0));
+    score -= deficit * deficit * 0.34;
+  });
+
+  const neutralKeys = metrics
+    .map(([key]) => key)
+    .filter(key => Math.abs(Number(state.priorities[key] || 0)) <= 1);
+  const stabilityPenalty = neutralKeys.reduce((sum, key) => {
+    const value = Number(totals[key] || 0);
+    return sum + Math.max(0, -value) * 0.08;
+  }, 0);
+
+  return score - stabilityPenalty;
+}
+
+function buildCandidatePool() {
+  return state.artifacts.filter(a => state.planSource === 'all' || Number(state.inventory[a.name] || 0) > 0);
+}
+
+function countUsedFromSlots(slots) {
+  return slots.reduce((acc, name) => {
+    if (!name) return acc;
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function canUseInPartial(name, usedMap, replacingName = null) {
+  if (state.planSource === 'all') return true;
+  const alreadyUsed = Number(usedMap[name] || 0) - (replacingName === name ? 1 : 0);
+  return alreadyUsed < Number(state.inventory[name] || 0);
 }
 
 function autoBuild() {
   syncSlots();
-  const totals = Object.fromEntries(metrics.map(([k]) => [k, 0]));
+  const pickable = buildCandidatePool();
+  const unlockedIndexes = state.slots
+    .map((_, i) => i)
+    .filter(i => !state.locked[i]);
 
-  state.slots.forEach((name, i) => {
-    if (!state.locked[i] || !name) return;
+  const baseSlots = state.slots.map((name, i) => state.locked[i] ? name : null);
+  const baseTotals = Object.fromEntries(metrics.map(([k]) => [k, 0]));
+  baseSlots.forEach(name => {
+    if (!name) return;
     const art = getArtifact(name);
     if (!art) return;
-    metrics.forEach(([key]) => totals[key] += Number(art[key] || 0));
+    metrics.forEach(([key]) => {
+      baseTotals[key] += Number(art[key] || 0);
+    });
   });
 
-  const pickable = state.artifacts.filter(a => state.planSource === 'all' || Number(state.inventory[a.name] || 0) > 0);
+  let beam = [{
+    slots: [...baseSlots],
+    used: countUsedFromSlots(baseSlots),
+    totals: { ...baseTotals },
+    score: scoreTotals(baseTotals)
+  }];
+  const beamWidth = 28;
 
-  for (let i = 0; i < state.slots.length; i++) {
-    if (state.locked[i]) continue;
-
-    let best = null;
-    let bestScore = -Infinity;
-    pickable.forEach(art => {
-      if (!canUse(art.name, i)) return;
-      const sc = scoreArtifact(art, totals);
-      if (sc > bestScore) {
-        bestScore = sc;
-        best = art;
-      }
+  unlockedIndexes.forEach(index => {
+    const nextBeam = [];
+    beam.forEach(candidate => {
+      pickable.forEach(art => {
+        if (!canUseInPartial(art.name, candidate.used, candidate.slots[index])) return;
+        const nextSlots = [...candidate.slots];
+        nextSlots[index] = art.name;
+        const nextUsed = { ...candidate.used, [art.name]: Number(candidate.used[art.name] || 0) + 1 };
+        const nextTotals = { ...candidate.totals };
+        metrics.forEach(([key]) => {
+          nextTotals[key] += Number(art[key] || 0);
+        });
+        nextBeam.push({
+          slots: nextSlots,
+          used: nextUsed,
+          totals: nextTotals,
+          score: scoreTotals(nextTotals)
+        });
+      });
     });
+    nextBeam.sort((a, b) => b.score - a.score);
+    beam = nextBeam.slice(0, beamWidth);
+  });
 
-    state.slots[i] = best ? best.name : null;
-    if (best) {
-      metrics.forEach(([key]) => totals[key] += Number(best[key] || 0));
-    }
+  const ranked = beam.sort((a, b) => b.score - a.score).slice(0, 4);
+  if (!ranked.length) {
+    state.alternatives = [];
+    saveState();
+    renderAll();
+    return;
   }
+
+  state.slots = [...ranked[0].slots];
+  state.alternatives = ranked.slice(1).map((variant, idx) => ({
+    id: `alt-${Date.now()}-${idx}`,
+    label: `Вариант ${idx + 2}`,
+    score: variant.score,
+    slots: [...variant.slots],
+    totals: variant.totals
+  }));
 
   saveState();
   renderAll();
 }
 
+function renderAlternatives() {
+  if (!els.alternatives) return;
+  els.alternatives.innerHTML = '';
+  if (!state.alternatives.length) {
+    els.alternatives.innerHTML = '<p class="mini">Альтернативы появятся после автосборки.</p>';
+    return;
+  }
+
+  state.alternatives.forEach(variant => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn alt-item';
+    const shock = Number(variant.totals.shock || 0);
+    const food = Number(variant.totals.food || 0);
+    const water = Number(variant.totals.water || 0);
+    btn.innerHTML = `<strong>${variant.label}</strong><span class="mini">Шок ${shock > 0 ? '+' : ''}${shock} • Еда ${food > 0 ? '+' : ''}${food} • Вода ${water > 0 ? '+' : ''}${water}</span>`;
+    btn.addEventListener('click', () => {
+      state.slots = [...variant.slots];
+      saveState();
+      renderAll();
+    });
+    els.alternatives.appendChild(btn);
+  });
+}
+
+function renderPriorities() {
+  if (!els.priorityGrid) return;
+  els.priorityGrid.innerHTML = '';
+
+  metrics.forEach(([key, label]) => {
+    const row = document.createElement('div');
+    row.className = 'priority-row';
+    const caption = document.createElement('span');
+    caption.textContent = label;
+
+    const controls = document.createElement('div');
+    controls.className = 'priority-stepper';
+    const minus = document.createElement('button');
+    minus.type = 'button';
+    minus.className = 'btn';
+    minus.textContent = '−';
+    const value = document.createElement('strong');
+    const current = Number(state.priorities[key] || 0);
+    value.textContent = `${current > 0 ? '+' : ''}${current}`;
+    const plus = document.createElement('button');
+    plus.type = 'button';
+    plus.className = 'btn';
+    plus.textContent = '+';
+
+    minus.addEventListener('click', () => {
+      state.priorities[key] = Math.max(-5, Number(state.priorities[key] || 0) - 1);
+      saveState();
+      renderPriorities();
+    });
+    plus.addEventListener('click', () => {
+      state.priorities[key] = Math.min(5, Number(state.priorities[key] || 0) + 1);
+      saveState();
+      renderPriorities();
+    });
+
+    controls.append(minus, value, plus);
+    row.append(caption, controls);
+    els.priorityGrid.appendChild(row);
+  });
+}
+
+function resetPriorities() {
+  state.priorities = { ...DEFAULT_PRIORITIES };
+  saveState();
+  renderPriorities();
+}
+
 function clearBuild() {
   syncSlots();
   state.slots = state.slots.map((slot, i) => state.locked[i] ? slot : null);
+  state.alternatives = [];
   saveState();
   renderAll();
 }
@@ -366,12 +540,18 @@ function runSelfCritique(totals) {
 
 function renderAll() {
   renderInventory();
+  renderPriorities();
   renderSlots();
+  renderAlternatives();
   renderTotals();
 }
 
 async function init() {
   loadState();
+  state.priorities = metrics.reduce((acc, [key]) => {
+    acc[key] = Number(state.priorities?.[key] ?? DEFAULT_PRIORITIES[key]);
+    return acc;
+  }, {});
   const resp = await fetch('artifacts.json');
   state.artifacts = await resp.json();
 
@@ -392,6 +572,7 @@ async function init() {
     saveState();
     renderAll();
   });
+  els.prioritiesReset?.addEventListener('click', resetPriorities);
   els.autoBuild.addEventListener('click', autoBuild);
   els.clearBuild.addEventListener('click', clearBuild);
 
