@@ -1,123 +1,159 @@
-diff --git a/index.html b/index.html
-index 273335567210c9eb7548103e4fe37d60f64b2ef0..66284e001742543d1550a0ee96b2d75212c21fff 100644
---- a/index.html
-+++ b/index.html
-@@ -1,112 +1,115 @@
- <!DOCTYPE html>
- <html lang="ru">
- <head>
-   <meta charset="UTF-8" />
-   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-   <title>STALKER DayZ — помощник по сборкам</title>
-   <link rel="stylesheet" href="styles.css" />
- </head>
- <body>
-   <div class="bg"></div>
-     <div class="app">
-+    <div id="systemStatus" class="system-status hidden" role="status" aria-live="polite"></div>
-     <header class="topbar glass">
-       <div class="brand">
-         <div class="eyebrow">ZONE PDA // LOADOUT</div>
-         <h1>Помощник по сборкам артефактов</h1><div class="brand-note">Безопасный автоподбор артефактных сборок.</div>
-       </div>
-       
-       <div class="top-controls">
-         <div class="control-box">
-           <div class="stack control-group-wrap">
-             <span>Пояс</span>
-             <div class="segmented" id="beltButtons" role="group" aria-label="Пояс">
-               <button class="seg-btn" type="button" data-belt="1">1</button>
-               <button class="seg-btn" type="button" data-belt="2">2</button>
-               <button class="seg-btn" type="button" data-belt="3">3</button>
-               <button class="seg-btn" type="button" data-belt="4">4</button>
-               <button class="seg-btn" type="button" data-belt="5">5</button>
-             </div>
-             <div class="control-caption" id="beltCaption">5 контейнеров (15 слотов)</div>
-             <select id="beltSelect" class="hidden-native-select" aria-hidden="true" tabindex="-1">
-               <option value="1">1 контейнер (3 слота)</option>
-               <option value="2">2 контейнера (6 слотов)</option>
-               <option value="3">3 контейнера (9 слотов)</option>
-               <option value="4">4 контейнера (12 слотов)</option>
-               <option value="5" selected>5 контейнеров (15 слотов)</option>
-             </select>
-           </div>
-           <div class="stack control-group-wrap">
-             <span>Подбор</span>
-             <div class="segmented segmented-wide" id="planButtons" role="group" aria-label="Подбор">
-               <button class="seg-btn" type="button" data-plan="inventory">Из инвентаря</button>
-               <button class="seg-btn" type="button" data-plan="all">Все арты</button>
-             </div>
-             <select id="planSourceSelect" class="hidden-native-select" aria-hidden="true" tabindex="-1">
-               <option value="inventory" selected>Из инвентаря</option>
-               <option value="all">Все арты</option>
-             </select>
-           </div>
-         </div>
- 
-         <div class="action-box">
-           <button id="applyBestBtn" class="btn primary">Автосборка</button>
--          <button id="refreshVariantsBtn" class="btn">Варианты</button>
--          <button id="clearBuildBtn" class="btn">Очистить</button>
--          <button id="openSavesBtn" class="btn">Сохранить / загрузить</button>
-+          <button id="refreshVariantsBtn" class="btn secondary">Варианты</button>
-+          <button id="clearBuildBtn" class="btn ghost">Очистить</button>
-+          <button id="openSavesBtn" class="btn secondary">Сохранить / загрузить</button>
-         </div>
-       </div>
-       <div class="zone-rad-badge" aria-hidden="true">☢</div>
-     </header>
- 
-     <main class="layout">
-       <aside class="panel glass inventory-panel">
-         <div class="panel-title-row panel-title-stack">
-           <h2>Инвентарь</h2>
-           <div class="toolbar toolbar-search">
-             <input id="inventorySearch" type="search" placeholder="Поиск..." />
-           </div>
-         </div>
-         <div class="muted small">
-           Укажи реальные количества артов.
-         </div>
-         <div class="inventory-list" id="inventoryList"></div>
-       </aside>
- 
-       <section class="panel glass builder-panel">
-         <div class="panel-title-row panel-title-simple">
-           <h2>Сборка</h2>
-         </div>
-         <div class="muted small">Замок фиксирует слот и подсвечивает ячейку.</div>
-+        <div class="muted small">💡 Перетаскивай арты ЛКМ между ячейками для быстрой перестановки.</div>
-         <div id="containersRoot" class="containers-root"></div>
-       </section>
- 
-       <aside class="panel glass sidebar-panel">
-         <div class="panel-title-row panel-title-simple">
-           <h2>Итог</h2>
-         </div>
-         <div id="totalsGrid" class="totals-grid"></div>
-+        <div id="decisionExplain" class="subpanel decision-explain"></div>
- 
-         <div class="muted small totals-hint">± рядом с цифрой меняет приоритет.</div>
-         <div class="totals-actions">
-           <button id="resetTargetsBtn" class="btn tiny">Сбросить приоритеты</button>
-         </div>
- 
-         <div class="subpanel compact-summary">
-           <div class="subpanel-title">Сводка по сборке</div>
-           <div class="summary-mini">
-             <div class="summary-section">
-               <div class="summary-label">Что нужно закрыть</div>
-               <div id="needsList" class="needs-list"></div>
-             </div>
-             <div class="summary-section">
-               <div class="summary-label">Чем закрыть из твоего</div>
-               <div id="ownedSuggestions" class="suggestions-list"></div>
-             </div>
-             <div class="summary-section">
-               <div class="summary-label">Если не хватает</div>
-               <div id="missingSuggestions" class="suggestions-list"></div>
-             </div>
-           </div>
-         </div>
-       </aside>
- 
+:root {
+  --bg: #08100c;
+  --panel: rgba(16, 27, 20, 0.88);
+  --line: #2d8d4b;
+  --text: #d7f8d5;
+  --muted: #8bb394;
+  --warn: #ffc857;
+  --bad: #ff6b6b;
+  --good: #7dff9b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at 20% 20%, #183424, transparent 40%), #070d09;
+  min-height: 100vh;
+}
+.noise,
+.scanline {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+.noise {
+  opacity: 0.12;
+  background-image: url("bg.png");
+  background-size: cover;
+  mix-blend-mode: screen;
+}
+.scanline {
+  background: linear-gradient(transparent 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  opacity: 0.2;
+}
+.app {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 22px;
+  position: relative;
+  z-index: 1;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid rgba(64, 168, 94, 0.35);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: inset 0 0 0 1px rgba(170,255,188,0.04), 0 10px 30px rgba(0,0,0,0.35);
+}
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+.eyebrow { color: var(--warn); font-size: 12px; letter-spacing: 1.4px; margin: 0 0 6px; }
+h1 { margin: 0; font-size: 32px; }
+.subtitle { margin: 8px 0 0; color: var(--muted); }
+.top-controls { display: grid; grid-template-columns: repeat(2, minmax(200px, 1fr)); gap: 10px; }
+label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+select, input, .btn {
+  border-radius: 10px;
+  border: 1px solid rgba(110, 205, 136, 0.4);
+  background: #0d1a13;
+  color: var(--text);
+  padding: 10px;
+}
+.btn { cursor: pointer; font-weight: 600; }
+.btn-primary {
+  background: linear-gradient(180deg, #92ff57, #5ab738);
+  border: none;
+  color: #0c140e;
+}
+.kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 14px 0; }
+.kpi h3 { margin: 0; font-size: 13px; color: var(--muted); }
+.kpi p { margin: 8px 0 0; font-size: 20px; font-weight: 700; }
+.layout { display: grid; grid-template-columns: 1.2fr 1.3fr 1fr; gap: 12px; }
+.block-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.block-head h2 { margin: 0; font-size: 20px; }
+.hint { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+.inventory-list { display: grid; gap: 8px; max-height: 68vh; overflow: auto; padding-right: 4px; }
+.inventory-item {
+  display: grid; grid-template-columns: 1fr auto; gap: 8px;
+  border: 1px solid rgba(75, 145, 92, 0.35); border-radius: 12px; padding: 8px;
+  background: rgba(14, 24, 18, 0.75);
+}
+.inventory-left { display: flex; align-items: center; gap: 8px; }
+.artifact-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid rgba(145, 221, 167, 0.5);
+  background: rgba(0, 0, 0, 0.35);
+}
+.name { font-weight: 700; }
+.mini { color: var(--muted); font-size: 12px; }
+.stepper { display: flex; align-items: center; gap: 6px; }
+.stepper button { width: 30px; height: 30px; border-radius: 8px; }
+.slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.slot {
+  border: 1px dashed rgba(130, 214, 152, 0.45);
+  border-radius: 12px;
+  min-height: 88px;
+  padding: 8px;
+  cursor: pointer;
+  background: rgba(8, 16, 12, 0.8);
+}
+.slot small { color: var(--muted); display: block; margin-bottom: 4px; }
+.slot strong { color: var(--good); }
+.slot-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.pick-btn { margin-top: 6px; width: 100%; }
+.lock-btn {
+  border: 1px solid rgba(110, 205, 136, 0.4);
+  background: #0d1a13;
+  color: var(--text);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.slot.locked {
+  border-style: solid;
+  border-color: rgba(255, 200, 87, 0.8);
+}
+.slot.drag-over {
+  outline: 2px solid rgba(125, 255, 155, 0.9);
+}
+.totals { display: grid; gap: 8px; }
+.total-row {
+  display: flex; justify-content: space-between; border-bottom: 1px solid rgba(85,147,99,0.25); padding: 6px 0;
+}
+.pos { color: var(--good); }
+.neg { color: var(--bad); }
+.critique {
+  margin-top: 12px;
+  border: 1px solid rgba(255, 200, 87, 0.3);
+  background: rgba(57, 45, 16, 0.34);
+  border-radius: 12px;
+  padding: 10px;
+  color: #ffdf9b;
+  font-size: 13px;
+}
+dialog {
+  border: 1px solid rgba(132, 223, 157, 0.6);
+  background: #101d15;
+  color: var(--text);
+  border-radius: 14px;
+  width: min(760px, 94vw);
+}
+.picker-form { display: grid; gap: 8px; }
+.picker-top { display: flex; justify-content: space-between; align-items: center; }
+.picker-list { max-height: 56vh; overflow: auto; display: grid; gap: 6px; }
+.pick-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border: 1px solid rgba(80,140,95,0.45); border-radius: 10px; }
+.pick-main { display: flex; align-items: center; gap: 8px; }
+@media (max-width: 1120px) {
+  .layout { grid-template-columns: 1fr; }
+  .topbar { flex-direction: column; }
+  .top-controls { grid-template-columns: 1fr; width: 100%; }
+  .kpi-row { grid-template-columns: 1fr; }
+}
