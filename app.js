@@ -85,10 +85,7 @@ function syncSlots() {
 function getArtifact(name) {
   return state.artifacts.find(a => a.name === name);
 }
-function getDirection(metricKey) {
-  const found = metrics.find(([key]) => key === metricKey);
-  return found ? found[2] : 1;
-}
+
 function priorityWeight(key) {
   const p = Number(state.priorities[key] || 0);
   if (p === 2) return 3.5;
@@ -116,22 +113,6 @@ function aggregateTotals() {
     metrics.forEach(([key]) => totals[key] += Number(art[key] || 0));
   });
   return totals;
-}
-
-function scoreArtifact(art, totals) {
-  const lowHealth = totals.health < 6;
-  const lowRad = totals.radBalance < 15;
-  return (
-    art.health * (lowHealth ? 2.2 : 1.2) +
-    art.blood * 0.05 +
-    art.shock * 0.03 +
-    art.radBalance * (lowRad ? 1.5 : 1.0) +
-    art.bleedHeal * 0.03 -
-    Math.max(0, -art.food) * 0.02 -
-    Math.max(0, -art.water) * 0.02 -
-    art.radIn * 0.5 -
-    Math.max(0, art.bleedChance) * 0.05
-  );
 }
 
 function scoreTotals(totals, baselineTotals = null, focusedMetric = null) {
