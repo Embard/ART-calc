@@ -84,6 +84,15 @@ select, input, .btn {
   border: 1px solid rgba(75, 145, 92, 0.35); border-radius: 12px; padding: 8px;
   background: rgba(14, 24, 18, 0.75);
 }
+.inventory-left { display: flex; align-items: center; gap: 8px; }
+.artifact-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid rgba(145, 221, 167, 0.5);
+  background: rgba(0, 0, 0, 0.35);
+}
 .name { font-weight: 700; }
 .mini { color: var(--muted); font-size: 12px; }
 .stepper { display: flex; align-items: center; gap: 6px; }
@@ -99,6 +108,22 @@ select, input, .btn {
 }
 .slot small { color: var(--muted); display: block; margin-bottom: 4px; }
 .slot strong { color: var(--good); }
+.slot-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.pick-btn { margin-top: 6px; width: 100%; }
+.lock-btn {
+  border: 1px solid rgba(110, 205, 136, 0.4);
+  background: #0d1a13;
+  color: var(--text);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.slot.locked {
+  border-style: solid;
+  border-color: rgba(255, 200, 87, 0.8);
+}
+.slot.drag-over {
+  outline: 2px solid rgba(125, 255, 155, 0.9);
+}
 .totals { display: grid; gap: 8px; }
 .total-row {
   display: flex; justify-content: space-between; border-bottom: 1px solid rgba(85,147,99,0.25); padding: 6px 0;
@@ -125,6 +150,7 @@ dialog {
 .picker-top { display: flex; justify-content: space-between; align-items: center; }
 .picker-list { max-height: 56vh; overflow: auto; display: grid; gap: 6px; }
 .pick-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border: 1px solid rgba(80,140,95,0.45); border-radius: 10px; }
+.pick-main { display: flex; align-items: center; gap: 8px; }
 @media (max-width: 1120px) {
   .layout { grid-template-columns: 1fr; }
   .topbar { flex-direction: column; }

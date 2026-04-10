@@ -4,6 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ART-CALC // ZONE OPS</title>
+  <style>
+    /* Critical fallback styles: applied even if external styles.css fails to load. */
+    :root { --bg:#08100c; --panel:rgba(16,27,20,.88); --text:#d7f8d5; --muted:#8bb394; --good:#7dff9b; --bad:#ff6b6b; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--text); background:radial-gradient(circle at 20% 20%, #183424, transparent 40%), #070d09; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; min-height:100vh; }
+    .app { max-width:1500px; margin:0 auto; padding:22px; position:relative; z-index:1; }
+    .panel { background:var(--panel); border:1px solid rgba(64,168,94,.35); border-radius:16px; padding:14px; }
+    .topbar{ display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
+    .top-controls{ display:grid; grid-template-columns:repeat(2,minmax(200px,1fr)); gap:10px; }
+    .kpi-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:14px 0; }
+    .layout{ display:grid; grid-template-columns:1.2fr 1.3fr 1fr; gap:12px; }
+    .inventory-list{ display:grid; gap:8px; max-height:68vh; overflow:auto; }
+    .slot{ border:1px dashed rgba(130,214,152,.45); border-radius:12px; min-height:88px; padding:8px; background:rgba(8,16,12,.8); }
+    .slots{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    @media (max-width:1120px){ .layout{grid-template-columns:1fr;} .topbar{flex-direction:column;} .top-controls{grid-template-columns:1fr;width:100%;} .kpi-row{grid-template-columns:1fr;} }
+  </style>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -68,7 +84,7 @@
       <section class="panel">
         <div class="block-head">
           <h2>Слоты контейнеров</h2>
-          <p class="hint">Клик по слоту открывает выбор артефакта. На мобильном тоже удобно.</p>
+          <p class="hint">Клик по кнопке «Выбрать» открывает выбор артефакта. 🔒 Закрепляй слот, чтобы автосборка его не трогала. Можно перетаскивать арты между слотами.</p>
         </div>
         <div id="slots" class="slots"></div>
       </section>
@@ -95,5 +111,16 @@
   </dialog>
 
   <script src="app.js"></script>
+  <script>
+    // If external stylesheet didn't apply, keep a clear diagnostic in console.
+    (function () {
+      const panel = document.querySelector('.panel');
+      if (!panel) return;
+      const bg = getComputedStyle(panel).backgroundColor;
+      if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
+        console.warn('styles.css may be missing or blocked; critical fallback styles are active.');
+      }
+    })();
+  </script>
 </body>
 </html>
