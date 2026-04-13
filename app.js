@@ -659,6 +659,19 @@ function artShortSummary(art) {
   if (art.bleedHeal) push('Леч.пореза', art.bleedHeal);
   return parts.join(' • ');
 }
+function artSlotMetaText(art) {
+  const entries = [];
+  const add = (label, value) => { if (!value) return; entries.push(`${label} ${value > 0 ? '+' : ''}${numberToText(value)}`); };
+  add('ХП', art.health);
+  add('Кровь', art.blood);
+  add('Шок', art.shock);
+  add('Рад', art.radBalance);
+  add('Вода', art.water);
+  add('Еда', art.food);
+  if (art.bleedChance) add('Порез', art.bleedChance);
+  if (art.bleedHeal) add('Леч.пореза', art.bleedHeal);
+  return entries.slice(0, 3).join(' • ') || 'Без заметных эффектов';
+}
 function buildStepper(currentValue, onMinus, onPlus) {
   const wrap = document.createElement('div');
   wrap.className = 'qty-stepper';
@@ -730,11 +743,7 @@ function renderInventory() {
     stats.className = 'art-substats';
     stats.innerHTML = artStatsChips(art);
 
-    const hint = document.createElement('div');
-    hint.className = 'helper-line';
-    hint.textContent = artShortSummary(art) || 'Без заметных эффектов';
-
-    copy.append(nameRow, stats, hint);
+    copy.append(nameRow, stats);
 
     const stepper = buildStepper(
       qty,
@@ -794,7 +803,7 @@ function renderBuilder() {
         const art = state.artifactsMap[artName];
         attachThumb(icon, art, '', 'slot-icon');
         nameEl.textContent = art.name;
-        metaEl.innerHTML = artStatsChips(art);
+        metaEl.textContent = artSlotMetaText(art);
       } else {
         attachThumb(icon, null, '+', 'slot-icon');
         nameEl.textContent = 'Пустой слот';
