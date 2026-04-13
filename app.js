@@ -1,11 +1,11 @@
 
 const CONFIG = {
   storage: {
-    state: 'stalker-build-helper-v41',
+    state: 'stalker-build-helper-v40',
     legacyState: 'stalker-build-helper-v23',
-    buildPresets: 'stalker-build-helper-v41-build-presets',
+    buildPresets: 'stalker-build-helper-v40-build-presets',
     legacyBuildPresets: 'stalker-build-helper-v23-build-presets',
-    inventoryPresets: 'stalker-build-helper-v41-inventory-presets',
+    inventoryPresets: 'stalker-build-helper-v40-inventory-presets',
     legacyInventoryPresets: 'stalker-build-helper-v23-inventory-presets'
   },
   belt: { minContainers: 1, maxContainers: 5, slotsPerContainer: 3 },
@@ -19,16 +19,7 @@ const CONFIG = {
     emission: { health: 9, shock: 20 },
     bloodTargetDefault: 100,
     bloodTargetWithWire: 50,
-    wireBleedHeal: 100,
-    comfortFloors: {
-      health: 3,
-      bloodDefault: 70,
-      bloodWithWire: 50,
-      shock: 20,
-      radBalance: 10,
-      water: 0,
-      food: 0
-    }
+    wireBleedHeal: 100
   },
   search: {
     beamBalanced: 380,
@@ -42,57 +33,27 @@ const CONFIG = {
   },
   scoring: {
     balanced: {
-      weakestBase: 56000,
-      averageBase: 14200,
-      spreadPenalty: 11800,
+      weakestBase: 52000,
+      averageBase: 15000,
+      spreadPenalty: 12000,
       slotUsageBonus: 4,
       comfort: {
         healthOver: { from: 8, weight: 220 },
         bloodFloor: { default: 70, withWire: 35, weight: 55 },
-        shockOver: { from: 12, weight: 96 },
-        radBalanceOver: { from: 10, weight: 58 },
-        emissionBonus: 2600,
-        tiers: {
-          health: [
-            { from: 1, bonus: 260 },
-            { from: 5, bonus: 540 },
-            { from: 9, bonus: 1100 }
-          ],
-          shock: [
-            { from: 8, bonus: 520 },
-            { from: 20, bonus: 1700 },
-            { from: 35, bonus: 1900 },
-            { from: 50, bonus: 1100 }
-          ],
-          radBalance: [
-            { from: 0, bonus: 260 },
-            { from: 10, bonus: 980 },
-            { from: 20, bonus: 820 }
-          ]
-        },
-        softStats: {
-          water: { nearFloor: -80, nearBonus: 120, zeroBonus: 360 },
-          food: { nearFloor: -80, nearBonus: 120, zeroBonus: 360 }
-        }
+        shockOver: { from: 20, weight: 70 },
+        radBalanceOver: { from: 10, weight: 55 },
+        emissionBonus: 2600
       }
     },
     penalties: {
-      water: { base: 0.04, final: 0.24 },
-      food: { base: 0.04, final: 0.24 },
+      water: { base: 0.15, final: 0.8 },
+      food: { base: 0.15, final: 0.8 },
       bleedChance: { base: 24, final: 160 },
       bleedHeal: { base: 8, final: 45 },
       fish: { base: 2200, final: 16000 },
       riskyBleedArtifact: { base: 1200, final: 8000 },
       bloodComfort: { base: 11, final: 95 },
       emissionMiss: { base: 180, final: 1400 },
-      comfortShortfall: {
-        health: { base: 900, final: 11000 },
-        blood: { base: 500, final: 6200 },
-        shock: { base: 700, final: 8200 },
-        radBalance: { base: 580, final: 7600 },
-        water: { base: 0.45, final: 5.5 },
-        food: { base: 0.45, final: 5.5 }
-      },
       hard: {
         health: { base: 15000, final: 250000 },
         blood: { base: 12000, final: 180000 },
@@ -102,23 +63,19 @@ const CONFIG = {
       }
     },
     targets: {
-      weight: {
-        base: { 1: 0.9, 2: 2.4, 3: 5.6 },
-        final: { 1: 1.4, 2: 3.5, 3: 7.6 }
-      },
       health: { base: 82, final: 680 },
       blood: { base: 9.5, final: 82 },
-      shock: { base: 15, final: 118 },
+      shock: { base: 11, final: 95 },
       water: { base: 4.2, final: 34 },
       food: { base: 4.2, final: 34 },
       radOut: { base: 4.8, final: 40 },
       radIn: { base: 4.8, final: 40 },
-      radBalance: { base: 18, final: 152 },
+      radBalance: { base: 16, final: 140 },
       bleedChance: { base: 7.2, final: 62 },
       bleedHeal: { base: 6.0, final: 56 }
     },
     objectives: {
-      balanced: { final: { health: 7600, blood: 6500, shock: 8400, radBalance: 7600 }, base: { health: 980, blood: 820, shock: 1080, radBalance: 980 }, slotUsage: { final: 3, base: 1 } },
+      balanced: { final: { health: 7600, blood: 7000, shock: 7000, radBalance: 7600 }, base: { health: 980, blood: 900, shock: 900, radBalance: 980 }, slotUsage: { final: 3, base: 1 } },
       health: { primaryNorm: { final: 9000, base: 1200 }, primaryRaw: { final: 220, base: 28 }, support: { shock: 700, radBalance: 700, blood: 400 } },
       blood: { primaryNorm: { final: 8000, base: 1050 }, primaryRaw: { final: 85, base: 10 }, support: { health: 700, shock: 650, radBalance: 650 } },
       shock: { primaryNorm: { final: 9000, base: 1200 }, primaryRaw: { final: 120, base: 15 }, support: { health: 800, blood: 550, radBalance: 650 } },
@@ -157,6 +114,9 @@ const state = {
     bleedHeal: 0
   }
 };
+
+let dragSourceIndex = null;
+let suppressSlotClickUntil = 0;
 
 const NAME_ALIASES = {
   'Шнурвал': 'Измененный штурвал',
@@ -559,27 +519,6 @@ function hasWireEffect(t) {
 function desiredBloodTarget(t) {
   return hasWireEffect(t) ? CONFIG.rules.bloodTargetWithWire : CONFIG.rules.bloodTargetDefault;
 }
-function comfortFloors(t) {
-  return {
-    health: Math.max(requiredHealthForHunger(t) + 2, CONFIG.rules.comfortFloors.health),
-    blood: hasWireEffect(t) ? CONFIG.rules.comfortFloors.bloodWithWire : CONFIG.rules.comfortFloors.bloodDefault,
-    shock: CONFIG.rules.comfortFloors.shock,
-    radBalance: CONFIG.rules.comfortFloors.radBalance,
-    water: CONFIG.rules.comfortFloors.water,
-    food: CONFIG.rules.comfortFloors.food
-  };
-}
-function comfortShortfalls(t) {
-  const floors = comfortFloors(t);
-  return {
-    health: Math.max(0, floors.health - t.health),
-    blood: Math.max(0, floors.blood - t.blood),
-    shock: Math.max(0, floors.shock - t.shock),
-    radBalance: Math.max(0, floors.radBalance - t.radBalance),
-    water: Math.max(0, floors.water - t.water),
-    food: Math.max(0, floors.food - t.food)
-  };
-}
 function normalizedBloodScore(t) {
   const target = desiredBloodTarget(t);
   const capped = Math.max(0, Math.min(t.blood, target));
@@ -723,18 +662,62 @@ function artShortSummary(art) {
   if (art.bleedHeal) push('Леч.пореза', art.bleedHeal);
   return parts.join(' • ');
 }
+
 function artSlotMetaText(art) {
   const parts = [];
-  const push = (label, value) => { if (!value) return; parts.push(`${label} ${value > 0 ? '+' : ''}${numberToText(value)}`); };
-  push('ХП', art.health);
-  push('Кровь', art.blood);
-  push('Шок', art.shock);
-  push('Рад', art.radBalance);
-  push('Вода', art.water);
-  push('Еда', art.food);
-  if (art.bleedChance) push('Порез', art.bleedChance);
-  if (art.bleedHeal) push('Леч.пореза', art.bleedHeal);
-  return parts.slice(0,3).join(' • ') || 'Без заметных эффектов';
+  const add = (label, value) => {
+    if (!value) return;
+    parts.push(`${label} ${value > 0 ? '+' : ''}${numberToText(value)}`);
+  };
+
+  add('ХП', art.health);
+  add('Кровь', art.blood);
+  add('Шок', art.shock);
+  add('Рад', art.radBalance);
+  if (parts.length < 3) add('Вода', art.water);
+  if (parts.length < 3) add('Еда', art.food);
+  if (parts.length < 3) add('Леч.', art.bleedHeal);
+  if (parts.length < 3) add('Порез', art.bleedChance);
+
+  return parts.slice(0, 3).join(' • ') || 'Артефакт без заметных эффектов';
+}
+
+function canDragSlot(slotIndex) {
+  return Boolean(state.slots[slotIndex]) && !state.locked[slotIndex];
+}
+function canDropToSlot(sourceIndex, targetIndex) {
+  return Number.isInteger(sourceIndex) && Number.isInteger(targetIndex) &&
+    sourceIndex !== targetIndex &&
+    Boolean(state.slots[sourceIndex]) &&
+    !state.locked[sourceIndex] &&
+    !state.locked[targetIndex];
+}
+function clearDragSlotClasses() {
+  document.querySelectorAll('.slot-card').forEach(node => {
+    node.classList.remove('drag-source', 'drag-target', 'drag-blocked');
+  });
+  document.body.classList.remove('dragging-slots');
+}
+function paintDragTargets(sourceIndex) {
+  document.querySelectorAll('.slot-card').forEach(node => {
+    const targetIndex = Number(node.dataset.slotIndex);
+    node.classList.remove('drag-source', 'drag-target', 'drag-blocked');
+    if (!Number.isInteger(targetIndex)) return;
+    if (targetIndex === sourceIndex) {
+      node.classList.add('drag-source');
+      return;
+    }
+    node.classList.add(canDropToSlot(sourceIndex, targetIndex) ? 'drag-target' : 'drag-blocked');
+  });
+}
+function moveArtifactBetweenSlots(sourceIndex, targetIndex) {
+  if (!canDropToSlot(sourceIndex, targetIndex)) return false;
+  const sourceValue = state.slots[sourceIndex];
+  const targetValue = state.slots[targetIndex];
+  state.slots[targetIndex] = sourceValue;
+  state.slots[sourceIndex] = targetValue || null;
+  saveState();
+  return true;
 }
 function buildStepper(currentValue, onMinus, onPlus) {
   const wrap = document.createElement('div');
@@ -861,7 +844,10 @@ function renderBuilder() {
       const artName = state.slots[slotIndex];
       const locked = Boolean(state.locked[slotIndex]);
 
-      if (locked) slotNode.classList.add('locked');
+      slotNode.dataset.slotIndex = String(slotIndex);
+      slotNode.classList.toggle('locked', locked);
+      slotNode.classList.toggle('empty', !artName);
+      slotNode.classList.toggle('can-drag', canDragSlot(slotIndex));
 
       if (artName && state.artifactsMap[artName]) {
         const art = state.artifactsMap[artName];
@@ -878,13 +864,67 @@ function renderBuilder() {
         btn.classList.add('invalid');
       }
 
+      btn.draggable = canDragSlot(slotIndex);
+      btn.title = artName
+        ? (locked ? 'Слот зафиксирован' : 'Зажми ЛКМ и перетащи в другой слот')
+        : 'Нажми, чтобы выбрать арт';
+
       lockBtn.textContent = locked ? '🔒' : '🔓';
       lockBtn.classList.toggle('active', locked);
       lockBtn.title = locked ? 'Снять фиксацию' : 'Зафиксировать';
       delBtn.title = 'Убрать';
 
-      btn.addEventListener('click', () => openPicker(slotIndex));
-      delBtn.addEventListener('click', () => {
+      btn.addEventListener('click', () => {
+        if (Date.now() < suppressSlotClickUntil) return;
+        openPicker(slotIndex);
+      });
+
+      btn.addEventListener('dragstart', e => {
+        if (!canDragSlot(slotIndex)) {
+          e.preventDefault();
+          return;
+        }
+        dragSourceIndex = slotIndex;
+        suppressSlotClickUntil = Date.now() + 180;
+        document.body.classList.add('dragging-slots');
+        paintDragTargets(slotIndex);
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', String(slotIndex));
+        }
+      });
+
+      btn.addEventListener('dragend', () => {
+        dragSourceIndex = null;
+        setTimeout(() => {
+          suppressSlotClickUntil = 0;
+          clearDragSlotClasses();
+        }, 0);
+      });
+
+      slotNode.addEventListener('dragover', e => {
+        if (!canDropToSlot(dragSourceIndex, slotIndex)) return;
+        e.preventDefault();
+        slotNode.classList.add('drag-target');
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      });
+
+      slotNode.addEventListener('dragleave', () => {
+        if (slotIndex !== dragSourceIndex) slotNode.classList.remove('drag-target');
+      });
+
+      slotNode.addEventListener('drop', e => {
+        if (!canDropToSlot(dragSourceIndex, slotIndex)) return;
+        e.preventDefault();
+        suppressSlotClickUntil = Date.now() + 220;
+        const moved = moveArtifactBetweenSlots(dragSourceIndex, slotIndex);
+        dragSourceIndex = null;
+        clearDragSlotClasses();
+        if (moved) renderAll(false);
+      });
+
+      delBtn.addEventListener('click', e => {
+        e.stopPropagation();
         state.slots[slotIndex] = null;
         state.locked[slotIndex] = false;
         saveState();
@@ -1137,27 +1177,12 @@ function signatureFromCounts(counts) {
 }
 
 function normalizedCore(totals) {
-  const shock = Math.max(0, totals.shock);
-  const shockNorm = clamp(shock / 35, 0, 1.35) + (shock >= 20 ? 0.12 : 0) + (shock >= 35 ? 0.08 : 0);
   return {
     health: clamp(Math.max(0, totals.health) / 12, 0, 1.5),
     blood: normalizedBloodScore(totals),
-    shock: clamp(shockNorm, 0, 1.55),
-    radBalance: clamp(Math.max(0, totals.radBalance) / 18, 0, 1.55)
+    shock: clamp(Math.max(0, totals.shock) / 50, 0, 1.5),
+    radBalance: clamp(Math.max(0, totals.radBalance) / 20, 0, 1.5)
   };
-}
-function tieredBonus(value, tiers = []) {
-  return tiers.reduce((sum, tier) => sum + (value >= tier.from ? tier.bonus : 0), 0);
-}
-function softZeroPreference(value, cfg) {
-  if (!cfg) return 0;
-  if (value >= 0) return cfg.zeroBonus || 0;
-  if (value >= (cfg.nearFloor || 0)) {
-    const span = Math.abs(cfg.nearFloor || 1);
-    const ratio = span ? (1 - Math.abs(value) / span) : 0;
-    return Math.max(0, (cfg.nearBonus || 0) * ratio);
-  }
-  return 0;
 }
 function balancedCoreScore(totals, slotUsage = 0) {
   const n = normalizedCore(totals);
@@ -1173,11 +1198,6 @@ function balancedCoreScore(totals, slotUsage = 0) {
     Math.max(0, Math.min(totals.blood, bloodTarget) - bloodComfortBase) * cfg.comfort.bloodFloor.weight +
     Math.max(0, totals.shock - cfg.comfort.shockOver.from) * cfg.comfort.shockOver.weight +
     Math.max(0, totals.radBalance - cfg.comfort.radBalanceOver.from) * cfg.comfort.radBalanceOver.weight +
-    tieredBonus(totals.health, cfg.comfort.tiers.health) +
-    tieredBonus(totals.shock, cfg.comfort.tiers.shock) +
-    tieredBonus(totals.radBalance, cfg.comfort.tiers.radBalance) +
-    softZeroPreference(totals.water, cfg.comfort.softStats.water) +
-    softZeroPreference(totals.food, cfg.comfort.softStats.food) +
     (canHoldEmission(totals) ? cfg.comfort.emissionBonus : 0);
   return weakest * cfg.weakestBase + avg * cfg.averageBase - spreadPenalty + comfortBonus + slotUsage * cfg.slotUsageBonus;
 }
@@ -1192,52 +1212,31 @@ function penalties(totals, fishCount, riskBleedCount, phase = 'base') {
   const riskPenalty = riskBleedCount * (finalPhase ? pCfg.riskyBleedArtifact.final : pCfg.riskyBleedArtifact.base);
   const bloodComfortPenalty = Math.max(0, desiredBloodTarget(totals) - totals.blood) * (finalPhase ? pCfg.bloodComfort.final : pCfg.bloodComfort.base);
   const emissionMissPenalty = (!canHoldEmission(totals) && (totals.health >= 7 || totals.shock >= 15)) ? (finalPhase ? pCfg.emissionMiss.final : pCfg.emissionMiss.base) : 0;
-  const shortfalls = comfortShortfalls(totals);
-  const comfortPenalty =
-    shortfalls.health * (finalPhase ? pCfg.comfortShortfall.health.final : pCfg.comfortShortfall.health.base) +
-    shortfalls.blood * (finalPhase ? pCfg.comfortShortfall.blood.final : pCfg.comfortShortfall.blood.base) +
-    shortfalls.shock * (finalPhase ? pCfg.comfortShortfall.shock.final : pCfg.comfortShortfall.shock.base) +
-    shortfalls.radBalance * (finalPhase ? pCfg.comfortShortfall.radBalance.final : pCfg.comfortShortfall.radBalance.base) +
-    shortfalls.water * (finalPhase ? pCfg.comfortShortfall.water.final : pCfg.comfortShortfall.water.base) +
-    shortfalls.food * (finalPhase ? pCfg.comfortShortfall.food.final : pCfg.comfortShortfall.food.base);
   const hardPenalty =
     Math.max(0, -totals.health) * (finalPhase ? pCfg.hard.health.final : pCfg.hard.health.base) +
     Math.max(0, -totals.blood) * (finalPhase ? pCfg.hard.blood.final : pCfg.hard.blood.base) +
     Math.max(0, -totals.shock) * (finalPhase ? pCfg.hard.shock.final : pCfg.hard.shock.base) +
     Math.max(0, -totals.radBalance) * (finalPhase ? pCfg.hard.radBalance.final : pCfg.hard.radBalance.base) +
     Math.max(0, totals.bleedChance) * (finalPhase ? pCfg.hard.bleedChance.final : pCfg.hard.bleedChance.base);
-  return { softPenalty: waterPenalty + foodPenalty + bloodComfortPenalty + emissionMissPenalty + comfortPenalty, bleedPenalty, fishPenalty, riskPenalty, hardPenalty };
-}
-function targetPriorityWeight(rawPriority, phase = 'base') {
-  const priority = clamp(Number(rawPriority || 0), CONFIG.priority.min, CONFIG.priority.max);
-  if (!priority) return 0;
-  const absPriority = Math.abs(priority);
-  const weights = phase === 'final' ? CONFIG.scoring.targets.weight.final : CONFIG.scoring.targets.weight.base;
-  return Math.sign(priority) * Number(weights[absPriority] || 0);
+  return { softPenalty: waterPenalty + foodPenalty + bloodComfortPenalty + emissionMissPenalty, bleedPenalty, fishPenalty, riskPenalty, hardPenalty };
 }
 function targetBonusScore(totals, phase = 'base') {
   const tCfg = CONFIG.scoring.targets;
   const finalPhase = phase === 'final';
+  const mult = key => targetScale(state.targets[key] || 0);
   const cappedBlood = Math.min(Math.max(0, totals.blood), desiredBloodTarget(totals));
-  const entries = {
-    health: Math.max(0, totals.health),
-    blood: cappedBlood,
-    shock: Math.max(0, totals.shock),
-    water: totals.water,
-    food: totals.food,
-    radOut: Math.max(0, totals.radOut),
-    radIn: -Math.max(0, totals.radIn),
-    radBalance: Math.max(0, totals.radBalance),
-    bleedChance: -Math.max(0, totals.bleedChance),
-    bleedHeal: Math.max(0, totals.bleedHeal)
-  };
-
-  return Object.entries(entries).reduce((sum, [key, value]) => {
-    const weight = targetPriorityWeight(state.targets[key], phase);
-    if (!weight) return sum;
-    const coeff = finalPhase ? tCfg[key].final : tCfg[key].base;
-    return sum + value * coeff * weight;
-  }, 0);
+  return (
+    Math.max(0, totals.health) * (finalPhase ? tCfg.health.final : tCfg.health.base) * mult('health') +
+    cappedBlood * (finalPhase ? tCfg.blood.final : tCfg.blood.base) * mult('blood') +
+    Math.max(0, totals.shock) * (finalPhase ? tCfg.shock.final : tCfg.shock.base) * mult('shock') +
+    totals.water * (finalPhase ? tCfg.water.final : tCfg.water.base) * mult('water') +
+    totals.food * (finalPhase ? tCfg.food.final : tCfg.food.base) * mult('food') +
+    Math.max(0, totals.radOut) * (finalPhase ? tCfg.radOut.final : tCfg.radOut.base) * mult('radOut') +
+    (-Math.max(0, totals.radIn)) * (finalPhase ? tCfg.radIn.final : tCfg.radIn.base) * mult('radIn') +
+    Math.max(0, totals.radBalance) * (finalPhase ? tCfg.radBalance.final : tCfg.radBalance.base) * mult('radBalance') +
+    (-Math.max(0, totals.bleedChance)) * (finalPhase ? tCfg.bleedChance.final : tCfg.bleedChance.base) * mult('bleedChance') +
+    Math.max(0, totals.bleedHeal) * (finalPhase ? tCfg.bleedHeal.final : tCfg.bleedHeal.base) * mult('bleedHeal')
+  );
 }
 function scoreByObjective(totals, fishCount, riskBleedCount, objective, slotUsage = 0, phase = 'base') {
   const n = normalizedCore(totals);
