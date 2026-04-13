@@ -723,6 +723,19 @@ function artShortSummary(art) {
   if (art.bleedHeal) push('Леч.пореза', art.bleedHeal);
   return parts.join(' • ');
 }
+function artSlotMetaText(art) {
+  const parts = [];
+  const push = (label, value) => { if (!value) return; parts.push(`${label} ${value > 0 ? '+' : ''}${numberToText(value)}`); };
+  push('ХП', art.health);
+  push('Кровь', art.blood);
+  push('Шок', art.shock);
+  push('Рад', art.radBalance);
+  push('Вода', art.water);
+  push('Еда', art.food);
+  if (art.bleedChance) push('Порез', art.bleedChance);
+  if (art.bleedHeal) push('Леч.пореза', art.bleedHeal);
+  return parts.slice(0,3).join(' • ') || 'Без заметных эффектов';
+}
 function buildStepper(currentValue, onMinus, onPlus) {
   const wrap = document.createElement('div');
   wrap.className = 'qty-stepper';
@@ -858,7 +871,7 @@ function renderBuilder() {
         const art = state.artifactsMap[artName];
         attachThumb(icon, art, '', 'slot-icon');
         nameEl.textContent = art.name;
-        metaEl.innerHTML = artStatsChips(art);
+        metaEl.textContent = artSlotMetaText(art);
       } else {
         attachThumb(icon, null, '+', 'slot-icon');
         nameEl.textContent = 'Пустой слот';
