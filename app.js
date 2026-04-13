@@ -665,11 +665,7 @@ function artShortSummary(art) {
 
 function artSlotMetaText(art) {
   const parts = [];
-  const add = (label, value) => {
-    if (!value) return;
-    parts.push(`${label} ${value > 0 ? '+' : ''}${numberToText(value)}`);
-  };
-
+  const add = (label, value) => { if (!value) return; parts.push(`${label} ${value > 0 ? '+' : ''}${numberToText(value)}`); };
   add('ХП', art.health);
   add('Кровь', art.blood);
   add('Шок', art.shock);
@@ -678,24 +674,17 @@ function artSlotMetaText(art) {
   if (parts.length < 3) add('Еда', art.food);
   if (parts.length < 3) add('Леч.', art.bleedHeal);
   if (parts.length < 3) add('Порез', art.bleedChance);
-
-  return parts.slice(0, 3).join(' • ') || 'Артефакт без заметных эффектов';
+  return parts.slice(0, 3).join(' • ') || 'Артефакт';
 }
 
 function canDragSlot(slotIndex) {
   return Boolean(state.slots[slotIndex]) && !state.locked[slotIndex];
 }
 function canDropToSlot(sourceIndex, targetIndex) {
-  return Number.isInteger(sourceIndex) && Number.isInteger(targetIndex) &&
-    sourceIndex !== targetIndex &&
-    Boolean(state.slots[sourceIndex]) &&
-    !state.locked[sourceIndex] &&
-    !state.locked[targetIndex];
+  return Number.isInteger(sourceIndex) && Number.isInteger(targetIndex) && sourceIndex !== targetIndex && Boolean(state.slots[sourceIndex]) && !state.locked[sourceIndex] && !state.locked[targetIndex];
 }
 function clearDragSlotClasses() {
-  document.querySelectorAll('.slot-card').forEach(node => {
-    node.classList.remove('drag-source', 'drag-target', 'drag-blocked');
-  });
+  document.querySelectorAll('.slot-card').forEach(node => node.classList.remove('drag-source', 'drag-target', 'drag-blocked'));
   document.body.classList.remove('dragging-slots');
 }
 function paintDragTargets(sourceIndex) {
@@ -703,11 +692,8 @@ function paintDragTargets(sourceIndex) {
     const targetIndex = Number(node.dataset.slotIndex);
     node.classList.remove('drag-source', 'drag-target', 'drag-blocked');
     if (!Number.isInteger(targetIndex)) return;
-    if (targetIndex === sourceIndex) {
-      node.classList.add('drag-source');
-      return;
-    }
-    node.classList.add(canDropToSlot(sourceIndex, targetIndex) ? 'drag-target' : 'drag-blocked');
+    if (targetIndex === sourceIndex) node.classList.add('drag-source');
+    else node.classList.add(canDropToSlot(sourceIndex, targetIndex) ? 'drag-target' : 'drag-blocked');
   });
 }
 function moveArtifactBetweenSlots(sourceIndex, targetIndex) {
@@ -780,11 +766,7 @@ function renderInventory() {
     name.className = 'art-name';
     name.textContent = art.name;
 
-    const badges = document.createElement('div');
-    badges.className = 'helper-line';
-    badges.textContent = art.isFish ? 'Рыбка' : (art.avoidAuto ? 'Исключён из авто' : 'Артефакт');
-
-    nameRow.append(name, badges);
+    nameRow.append(name);
 
     const stats = document.createElement('div');
     stats.className = 'art-substats';
@@ -865,9 +847,7 @@ function renderBuilder() {
       }
 
       btn.draggable = canDragSlot(slotIndex);
-      btn.title = artName
-        ? (locked ? 'Слот зафиксирован' : 'Зажми ЛКМ и перетащи в другой слот')
-        : 'Нажми, чтобы выбрать арт';
+      btn.title = artName ? (locked ? 'Слот зафиксирован' : 'Зажми ЛКМ и перетащи в другой слот') : 'Нажми, чтобы выбрать арт';
 
       lockBtn.textContent = locked ? '🔒' : '🔓';
       lockBtn.classList.toggle('active', locked);
@@ -878,7 +858,6 @@ function renderBuilder() {
         if (Date.now() < suppressSlotClickUntil) return;
         openPicker(slotIndex);
       });
-
       btn.addEventListener('dragstart', e => {
         if (!canDragSlot(slotIndex)) {
           e.preventDefault();
@@ -893,26 +872,19 @@ function renderBuilder() {
           e.dataTransfer.setData('text/plain', String(slotIndex));
         }
       });
-
       btn.addEventListener('dragend', () => {
         dragSourceIndex = null;
-        setTimeout(() => {
-          suppressSlotClickUntil = 0;
-          clearDragSlotClasses();
-        }, 0);
+        setTimeout(() => { suppressSlotClickUntil = 0; clearDragSlotClasses(); }, 0);
       });
-
       slotNode.addEventListener('dragover', e => {
         if (!canDropToSlot(dragSourceIndex, slotIndex)) return;
         e.preventDefault();
         slotNode.classList.add('drag-target');
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
       });
-
       slotNode.addEventListener('dragleave', () => {
         if (slotIndex !== dragSourceIndex) slotNode.classList.remove('drag-target');
       });
-
       slotNode.addEventListener('drop', e => {
         if (!canDropToSlot(dragSourceIndex, slotIndex)) return;
         e.preventDefault();
@@ -922,7 +894,6 @@ function renderBuilder() {
         clearDragSlotClasses();
         if (moved) renderAll(false);
       });
-
       delBtn.addEventListener('click', e => {
         e.stopPropagation();
         state.slots[slotIndex] = null;
