@@ -807,11 +807,7 @@ function renderInventory() {
     stats.className = 'art-substats';
     stats.innerHTML = artStatsChips(art);
 
-    const hint = document.createElement('div');
-    hint.className = 'helper-line';
-    hint.textContent = artShortSummary(art) || 'Без заметных эффектов';
-
-    copy.append(nameRow, stats, hint);
+    copy.append(nameRow, stats);
 
     const stepper = buildStepper(
       qty,
