@@ -662,49 +662,6 @@ function artShortSummary(art) {
   if (art.bleedHeal) push('Леч.пореза', art.bleedHeal);
   return parts.join(' • ');
 }
-
-function artSlotMetaText(art) {
-  const parts = [];
-  const add = (label, value) => { if (!value) return; parts.push(`${label} ${value > 0 ? '+' : ''}${numberToText(value)}`); };
-  add('ХП', art.health);
-  add('Кровь', art.blood);
-  add('Шок', art.shock);
-  add('Рад', art.radBalance);
-  if (parts.length < 3) add('Вода', art.water);
-  if (parts.length < 3) add('Еда', art.food);
-  if (parts.length < 3) add('Леч.', art.bleedHeal);
-  if (parts.length < 3) add('Порез', art.bleedChance);
-  return parts.slice(0, 3).join(' • ') || 'Артефакт';
-}
-
-function canDragSlot(slotIndex) {
-  return Boolean(state.slots[slotIndex]) && !state.locked[slotIndex];
-}
-function canDropToSlot(sourceIndex, targetIndex) {
-  return Number.isInteger(sourceIndex) && Number.isInteger(targetIndex) && sourceIndex !== targetIndex && Boolean(state.slots[sourceIndex]) && !state.locked[sourceIndex] && !state.locked[targetIndex];
-}
-function clearDragSlotClasses() {
-  document.querySelectorAll('.slot-card').forEach(node => node.classList.remove('drag-source', 'drag-target', 'drag-blocked'));
-  document.body.classList.remove('dragging-slots');
-}
-function paintDragTargets(sourceIndex) {
-  document.querySelectorAll('.slot-card').forEach(node => {
-    const targetIndex = Number(node.dataset.slotIndex);
-    node.classList.remove('drag-source', 'drag-target', 'drag-blocked');
-    if (!Number.isInteger(targetIndex)) return;
-    if (targetIndex === sourceIndex) node.classList.add('drag-source');
-    else node.classList.add(canDropToSlot(sourceIndex, targetIndex) ? 'drag-target' : 'drag-blocked');
-  });
-}
-function moveArtifactBetweenSlots(sourceIndex, targetIndex) {
-  if (!canDropToSlot(sourceIndex, targetIndex)) return false;
-  const sourceValue = state.slots[sourceIndex];
-  const targetValue = state.slots[targetIndex];
-  state.slots[targetIndex] = sourceValue;
-  state.slots[sourceIndex] = targetValue || null;
-  saveState();
-  return true;
-}
 function buildStepper(currentValue, onMinus, onPlus) {
   const wrap = document.createElement('div');
   wrap.className = 'qty-stepper';
@@ -826,16 +783,13 @@ function renderBuilder() {
       const artName = state.slots[slotIndex];
       const locked = Boolean(state.locked[slotIndex]);
 
-      slotNode.dataset.slotIndex = String(slotIndex);
-      slotNode.classList.toggle('locked', locked);
-      slotNode.classList.toggle('empty', !artName);
-      slotNode.classList.toggle('can-drag', canDragSlot(slotIndex));
+      if (locked) slotNode.classList.add('locked');
 
       if (artName && state.artifactsMap[artName]) {
         const art = state.artifactsMap[artName];
         attachThumb(icon, art, '', 'slot-icon');
         nameEl.textContent = art.name;
-        metaEl.textContent = artSlotMetaText(art);
+        metaEl.innerHTML = artStatsChips(art);
       } else {
         attachThumb(icon, null, '+', 'slot-icon');
         nameEl.textContent = 'Пустой слот';
@@ -846,56 +800,13 @@ function renderBuilder() {
         btn.classList.add('invalid');
       }
 
-      btn.draggable = canDragSlot(slotIndex);
-      btn.title = artName ? (locked ? 'Слот зафиксирован' : 'Зажми ЛКМ и перетащи в другой слот') : 'Нажми, чтобы выбрать арт';
-
       lockBtn.textContent = locked ? '🔒' : '🔓';
       lockBtn.classList.toggle('active', locked);
       lockBtn.title = locked ? 'Снять фиксацию' : 'Зафиксировать';
       delBtn.title = 'Убрать';
 
-      btn.addEventListener('click', () => {
-        if (Date.now() < suppressSlotClickUntil) return;
-        openPicker(slotIndex);
-      });
-      btn.addEventListener('dragstart', e => {
-        if (!canDragSlot(slotIndex)) {
-          e.preventDefault();
-          return;
-        }
-        dragSourceIndex = slotIndex;
-        suppressSlotClickUntil = Date.now() + 180;
-        document.body.classList.add('dragging-slots');
-        paintDragTargets(slotIndex);
-        if (e.dataTransfer) {
-          e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/plain', String(slotIndex));
-        }
-      });
-      btn.addEventListener('dragend', () => {
-        dragSourceIndex = null;
-        setTimeout(() => { suppressSlotClickUntil = 0; clearDragSlotClasses(); }, 0);
-      });
-      slotNode.addEventListener('dragover', e => {
-        if (!canDropToSlot(dragSourceIndex, slotIndex)) return;
-        e.preventDefault();
-        slotNode.classList.add('drag-target');
-        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-      });
-      slotNode.addEventListener('dragleave', () => {
-        if (slotIndex !== dragSourceIndex) slotNode.classList.remove('drag-target');
-      });
-      slotNode.addEventListener('drop', e => {
-        if (!canDropToSlot(dragSourceIndex, slotIndex)) return;
-        e.preventDefault();
-        suppressSlotClickUntil = Date.now() + 220;
-        const moved = moveArtifactBetweenSlots(dragSourceIndex, slotIndex);
-        dragSourceIndex = null;
-        clearDragSlotClasses();
-        if (moved) renderAll(false);
-      });
-      delBtn.addEventListener('click', e => {
-        e.stopPropagation();
+      btn.addEventListener('click', () => openPicker(slotIndex));
+      delBtn.addEventListener('click', () => {
         state.slots[slotIndex] = null;
         state.locked[slotIndex] = false;
         saveState();
