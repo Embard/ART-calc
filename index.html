@@ -3,20 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LabScheduler — запись в данжи</title>
+  <title>Bezzumie данжи — запись</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <div class="page-shell">
     <header class="hero">
-      <div>
-        <p class="eyebrow">Запись по МСК · текущий день</p>
-        <h1>LabScheduler</h1>
-        <p class="hero-text">
-          Выбери данж, свободный временной слот и запишись под своим именем.
-          На один и тот же данж можно записаться только один раз за день.
-        </p>
+      <div class="hero-main">
+        <h1>Bezzumie данжи</h1>
+
+        <section class="hero-rules" aria-labelledby="rulesTitle">
+          <h2 id="rulesTitle">Как пользоваться</h2>
+          <div class="rules-grid">
+            <div class="rule-card">
+              <strong>Выбери имя, данж и время</strong>
+              <span>Запись создаётся на текущий день по московскому времени.</span>
+            </div>
+            <div class="rule-card">
+              <strong>Один данж — один раз в день</strong>
+              <span>На один и тот же данж нельзя записаться повторно в эту же дату.</span>
+            </div>
+            <div class="rule-card">
+              <strong>Ошибся со временем — удали запись</strong>
+              <span>Свою запись можно удалить, после этого можно выбрать другое время.</span>
+            </div>
+          </div>
+        </section>
       </div>
+
       <div class="today-card" aria-live="polite">
         <span class="today-label">Сегодня по МСК</span>
         <strong id="todayDate">—</strong>
@@ -70,24 +84,6 @@
         </div>
 
         <div id="scheduleGrid" class="schedule-grid" aria-live="polite"></div>
-      </section>
-
-      <section class="panel compact-panel" aria-labelledby="rulesTitle">
-        <h2 id="rulesTitle">Правила записи</h2>
-        <div class="rules-grid">
-          <div class="rule-card">
-            <strong>Один данж — один раз в день</strong>
-            <span>Повторно записаться на тот же данж в текущую дату нельзя.</span>
-          </div>
-          <div class="rule-card">
-            <strong>Можно удалить свою запись</strong>
-            <span>Если выбрал неправильное время, удали запись и запишись заново.</span>
-          </div>
-          <div class="rule-card">
-            <strong>Дата считается по МСК</strong>
-            <span>Новый день начинается в 00:00 по московскому времени.</span>
-          </div>
-        </div>
       </section>
     </main>
   </div>
