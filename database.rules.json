@@ -1,0 +1,19 @@
+{
+  "rules": {
+    "days": {
+      "$day": {
+        ".read": true,
+        "dungeons": {
+          "$dungeon": {
+            "signups": {
+              "$uid": {
+                ".write": "auth != null && auth.uid === $uid && ((!data.exists() && newData.exists()) || (data.exists() && !newData.exists()))",
+                ".validate": "newData.val() === null || (newData.hasChildren(['uid', 'name', 'dungeonId', 'dungeonName', 'slot', 'slotLabel', 'createdAt']) && newData.child('uid').val() === auth.uid && newData.child('name').isString() && newData.child('name').val().length >= 2 && newData.child('name').val().length <= 40 && newData.child('dungeonId').isString() && newData.child('dungeonName').isString() && newData.child('slot').isString() && newData.child('slotLabel').isString())"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
